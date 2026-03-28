@@ -1,0 +1,37 @@
+{
+  "user": "Prannav",
+  "current_age": 20,
+  "scenario": "current",
+  "has_reference_image": false,
+  "projections": {
+    "30": {
+      "nominal_wealth": 7649.963808480011,
+      "real_wealth": 4271.6998342449215,
+      "lifestyle": "At Risk",
+      "image_path": "kred_output\\prannav_current_age30_at_risk.png",
+      "image_source": "AI (txt2img)"
+    },
+    "40": {
+      "nominal_wealth": 27491.99975676293,
+      "real_wealth": 8572.13547570976,
+      "lifestyle": "At Risk",
+      "image_path": "kred_output\\prannav_current_age40_at_risk.png",
+      "image_source": "AI (txt2img)"
+    },
+    "50": {
+      "nominal_wealth": 78957.13089065495,
+      "real_wealth": 13747.236395700022,
+      "lifestyle": "At Risk",
+      "image_path": "kred_output\\prannav_current_age50_at_risk.png",
+      "image_source": "AI (txt2img)"
+    },
+    "60": {
+      "nominal_wealth": 212444.42672724527,
+      "real_wealth": 20654.311932902106,
+      "lifestyle": "At Risk",
+      "image_path": "kred_output\\prannav_current_age60_at_risk.png",
+      "image_source": "AI (txt2img)"
+    }
+  },
+  "generated_at": "2026-03-28T18:06:30.746865"
+}
