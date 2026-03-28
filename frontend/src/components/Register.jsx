@@ -65,14 +65,14 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center">
               <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
@@ -101,7 +101,7 @@ export default function Register() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-200"
+                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors duration-200"
                 placeholder="John Doe"
               />
             </div>
@@ -116,7 +116,7 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-200"
+                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors duration-200"
                 placeholder="you@example.com"
               />
             </div>
@@ -132,7 +132,7 @@ export default function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-200"
+                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors duration-200"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -147,7 +147,7 @@ export default function Register() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-200"
+                className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors duration-200"
                 placeholder="Confirm your password"
               />
             </div>
@@ -157,20 +157,20 @@ export default function Register() {
                 type="checkbox"
                 id="terms"
                 required
-                className="mt-1 w-4 h-4 rounded border-secondary bg-background text-blue-500 focus:ring-blue-500 cursor-pointer"
+                className="mt-1 w-4 h-4 rounded border-secondary bg-background text-accent focus:ring-accent cursor-pointer"
               />
               <label htmlFor="terms" className="text-sm text-text-secondary cursor-pointer">
                 I agree to the{' '}
-                <a href="#" className="text-blue-500 hover:text-blue-400">Terms of Service</a>
+                <a href="#" className="text-accent hover:text-accent">Terms of Service</a>
                 {' '}and{' '}
-                <a href="#" className="text-blue-500 hover:text-blue-400">Privacy Policy</a>
+                <a href="#" className="text-accent hover:text-accent">Privacy Policy</a>
               </label>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-accent text-white font-semibold rounded-xl hover:bg-accent focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>
@@ -188,7 +188,7 @@ export default function Register() {
           <button
             onClick={handleGoogleRegister}
             disabled={loading}
-            className="w-full py-3 px-4 bg-background border border-secondary rounded-xl text-text-primary font-medium hover:bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
+            className="w-full py-3 px-4 bg-background border border-secondary rounded-xl text-text-primary font-medium hover:bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-surface transition-all duration-200 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -202,7 +202,7 @@ export default function Register() {
 
         <p className="text-center mt-6 text-text-secondary">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
+          <Link to="/login" className="text-accent hover:text-accent font-medium transition-colors">
             Sign in
           </Link>
         </p>

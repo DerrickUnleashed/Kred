@@ -30,7 +30,7 @@ const CATEGORIES = [
   'Other',
 ];
 
-const COLORS = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554', '#3B82F680'];
+const COLORS = ['#3B82F6', '#E5B74B', '#E5B74B', '#BFDBFE', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554', '#3B82F680'];
 const ESSENTIAL_COLORS = ['#3B82F6', '#F97316'];
 
 const computeDynamicLimit = (monthlyIncome, expectedSavings, products, totalExpenses) => {
@@ -467,7 +467,7 @@ export default function Dashboard() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
                 activeTab === tab
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-accent text-white'
                   : 'bg-surface border border-secondary text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -476,7 +476,7 @@ export default function Dashboard() {
           ))}
           <Link
             to="/stocks"
-            className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-blue-500 hover:border-blue-500 transition-colors"
+            className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-accent hover:border-accent transition-colors"
           >
             Stocks
           </Link>
@@ -487,7 +487,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Monthly Income</p>
-                <p className="text-2xl font-bold text-blue-500">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-accent">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Expected Savings</p>
@@ -508,7 +508,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Essential Expenses</p>
-                <p className="text-2xl font-bold text-blue-500">₹{essentialExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-accent">₹{essentialExpenses.toLocaleString()}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Non-Essential Expenses</p>
@@ -652,7 +652,7 @@ export default function Dashboard() {
                     value={monthlyIncome}
                     onChange={(e) => setMonthlyIncome(e.target.value)}
                     placeholder="Enter your monthly income"
-                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
                   />
                 </div>
                 <div>
@@ -662,13 +662,13 @@ export default function Dashboard() {
                     value={expectedSavings}
                     onChange={(e) => setExpectedSavings(e.target.value)}
                     placeholder="How much you want to save"
-                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
                   />
                 </div>
               </div>
-              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+              <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl">
                 <p className="text-text-secondary text-sm">
-                  <span className="text-blue-500 font-medium">Expected Expense:</span> 
+                  <span className="text-accent font-medium">Expected Expense:</span> 
                   <span className="text-text-primary font-semibold ml-2">₹{expectedExpenses.toLocaleString()}</span>
                   <span className="text-text-muted text-xs ml-2">(Income - Savings)</span>
                 </p>
@@ -676,7 +676,7 @@ export default function Dashboard() {
               <button
                 onClick={saveIncome}
                 disabled={incomeLoading}
-                className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50 cursor-pointer"
+                className="px-6 py-3 bg-accent text-white font-semibold rounded-xl hover:bg-accent transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {incomeLoading ? 'Saving...' : 'Save'}
               </button>
@@ -700,7 +700,7 @@ export default function Dashboard() {
                       onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                       required
                       placeholder="e.g., Laptop"
-                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
                   <div>
@@ -708,7 +708,7 @@ export default function Dashboard() {
                     <select
                       value={productForm.category}
                       onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
                     >
                       {CATEGORIES.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -724,7 +724,7 @@ export default function Dashboard() {
                       required
                       min="1"
                       placeholder="e.g., 2"
-                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
                   <div>
@@ -737,7 +737,7 @@ export default function Dashboard() {
                       min="0"
                       step="0.01"
                       placeholder="e.g., 999.99"
-                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
                     />
                   </div>
                 </div>
@@ -751,7 +751,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => setProductForm({ ...productForm, is_essential: !productForm.is_essential })}
                     className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ${
-                      productForm.is_essential ? 'bg-blue-500' : 'bg-secondary'
+                      productForm.is_essential ? 'bg-accent' : 'bg-secondary'
                     }`}
                   >
                     <span
@@ -765,7 +765,7 @@ export default function Dashboard() {
                 <div className="flex gap-4">
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
+                    className="px-6 py-3 bg-accent text-white font-semibold rounded-xl hover:bg-accent transition-colors cursor-pointer"
                   >
                     {editingId ? 'Update Product' : 'Add Product'}
                   </button>
@@ -813,7 +813,7 @@ export default function Dashboard() {
                           <td className="py-3 px-4">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                               product.is_essential 
-                                ? 'bg-blue-500/20 text-blue-400' 
+                                ? 'bg-accent/20 text-accent' 
                                 : 'bg-orange-500/20 text-orange-400'
                             }`}>
                               {product.is_essential ? 'Essential' : 'Non-Essential'}
@@ -821,12 +821,12 @@ export default function Dashboard() {
                           </td>
                           <td className="py-3 px-4 text-text-secondary">{product.quantity}</td>
                           <td className="py-3 px-4 text-text-secondary">₹{product.cost_per_unit}</td>
-                          <td className="py-3 px-4 text-blue-500 font-medium">₹{product.total_cost}</td>
+                          <td className="py-3 px-4 text-accent font-medium">₹{product.total_cost}</td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleEdit(product)}
-                                className="px-3 py-1 text-sm bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/30 transition-colors cursor-pointer"
+                                className="px-3 py-1 text-sm bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition-colors cursor-pointer"
                               >
                                 Edit
                               </button>
@@ -857,7 +857,7 @@ export default function Dashboard() {
                   <>
                     <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                       <p className="text-text-secondary text-sm mb-1">Daily Dynamic Limit</p>
-                      <p className="text-3xl font-bold text-blue-500">₹{limitData.dynamic_limit.toLocaleString()}</p>
+                      <p className="text-3xl font-bold text-accent">₹{limitData.dynamic_limit.toLocaleString()}</p>
                     </div>
                     <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                       <p className="text-text-secondary text-sm mb-1">Safe to Spend Now</p>
@@ -1076,7 +1076,7 @@ export default function Dashboard() {
                     </div>
                     <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                       <p className="text-text-secondary text-sm mb-1">Behavior Profile</p>
-                      <p className="text-xl font-semibold text-blue-400 capitalize">
+                      <p className="text-xl font-semibold text-accent capitalize">
                         {behaviorData.behavior_profile.replace('_', ' ')}
                       </p>
                     </div>
@@ -1105,7 +1105,7 @@ export default function Dashboard() {
                         }}
                       />
                       <Bar dataKey="actual" fill="#3B82F6" name="Actual" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="predicted" fill="#60A5FA" name="Predicted Avg" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="predicted" fill="#E5B74B" name="Predicted Avg" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -1142,7 +1142,7 @@ export default function Dashboard() {
                       </div>
                       <div className="bg-background/50 rounded-xl p-4">
                         <p className="text-text-secondary text-sm mb-2">Spending Volatility</p>
-                        <p className="text-xl font-bold text-blue-400">₹{patterns.overspending.volatility.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-accent">₹{patterns.overspending.volatility.toLocaleString()}</p>
                         <p className="text-text-muted text-xs">Average deviation from mean</p>
                       </div>
                       <div className="bg-background/50 rounded-xl p-4">
@@ -1171,8 +1171,8 @@ export default function Dashboard() {
                   return (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 bg-blue-500/10 rounded-xl">
-                          <p className="text-2xl font-bold text-blue-400">{behaviorData.essential_count}</p>
+                        <div className="text-center p-4 bg-accent/10 rounded-xl">
+                          <p className="text-2xl font-bold text-accent">{behaviorData.essential_count}</p>
                           <p className="text-text-secondary text-sm">Essential Items</p>
                           <p className="text-text-muted text-xs">₹{behaviorData.essential_expenses.toLocaleString()}</p>
                         </div>
@@ -1215,9 +1215,9 @@ export default function Dashboard() {
                 return (
                   <div className="space-y-3">
                     {behaviorData.insights.map((insight, index) => (
-                      <div key={index} className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-start gap-3">
+                      <div key={index} className="p-4 bg-accent/10 border border-accent/30 rounded-xl flex items-start gap-3">
                         <span className="text-xl"></span>
-                        <p className="text-blue-300">{insight}</p>
+                        <p className="text-accent">{insight}</p>
                       </div>
                     ))}
                   </div>
@@ -1260,12 +1260,12 @@ export default function Dashboard() {
                       </div>
                       <div className="bg-background/50 rounded-xl p-4 text-center">
                         <p className="text-text-muted text-sm mb-1">Potential Savings</p>
-                        <p className="text-xl font-bold text-blue-400">₹{projection.potential_savings?.toLocaleString() || 0}</p>
+                        <p className="text-xl font-bold text-accent">₹{projection.potential_savings?.toLocaleString() || 0}</p>
                       </div>
                     </div>
                     {projection.note && (
-                      <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                        <p className="text-blue-300 text-sm">{projection.note}</p>
+                      <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl">
+                        <p className="text-accent text-sm">{projection.note}</p>
                       </div>
                     )}
                   </div>

@@ -306,8 +306,8 @@ export default function Stocks() {
       {
         label: 'Close Price',
         data: historicalData?.map(d => d.close) || [],
-        borderColor: '#3b82f6',
-        backgroundColor: '#3b82f620',
+        borderColor: '#E5B74B',
+        backgroundColor: '#E5B74B20',
         fill: true,
         tension: 0,
         pointRadius: 0,
@@ -323,7 +323,7 @@ export default function Stocks() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 text-text-secondary hover:text-blue-400 mb-4 transition-colors"
+          className="inline-flex items-center gap-2 text-text-secondary hover:text-accent mb-4 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -343,7 +343,7 @@ export default function Stocks() {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
                 activeTab === tab
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-accent text-white'
                   : 'bg-surface border border-secondary text-text-secondary hover:text-text-primary'
               }`}
             >
@@ -357,7 +357,7 @@ export default function Stocks() {
             <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
                 <span>Market Indices</span>
-                <button onClick={fetchMarketData} className="text-blue-400 text-sm hover:text-blue-300">Refresh</button>
+                <button onClick={fetchMarketData} className="text-accent text-sm hover:text-accent">Refresh</button>
               </h2>
               {marketData.indices?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -378,13 +378,13 @@ export default function Stocks() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400">🚀 Top Gainers</h2>
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400"> Top Gainers</h2>
                 {marketData.gainers?.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.gainers.map((g) => (
                       <div key={g.symbol} className="flex items-center justify-between bg-background/50 rounded-lg p-3 border border-secondary">
                         <div>
-                          <span className="font-bold text-blue-400">{g.symbol}</span>
+                          <span className="font-bold text-accent">{g.symbol}</span>
                           <span className="text-text-muted text-sm ml-2">{g.name}</span>
                         </div>
                         <div className="text-right">
@@ -400,13 +400,13 @@ export default function Stocks() {
               </div>
 
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400">📉 Top Losers</h2>
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400"> Top Losers</h2>
                 {marketData.losers?.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.losers.map((l) => (
                       <div key={l.symbol} className="flex items-center justify-between bg-background/50 rounded-lg p-3 border border-secondary">
                         <div>
-                          <span className="font-bold text-blue-400">{l.symbol}</span>
+                          <span className="font-bold text-accent">{l.symbol}</span>
                           <span className="text-text-muted text-sm ml-2">{l.name}</span>
                         </div>
                         <div className="text-right">
@@ -442,7 +442,7 @@ export default function Stocks() {
                 <select
                   value={selectedStock}
                   onChange={(e) => setSelectedStock(e.target.value)}
-                  className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-accent cursor-pointer"
                 >
                   {ALL_STOCKS.map((stock) => (
                     <option key={stock} value={stock}>{stock}</option>
@@ -451,7 +451,7 @@ export default function Stocks() {
                 <select
                   value={riskProfile}
                   onChange={(e) => setRiskProfile(e.target.value)}
-                  className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-accent cursor-pointer"
                 >
                   <option value="Conservative">Conservative</option>
                   <option value="Moderate">Moderate</option>
@@ -461,7 +461,7 @@ export default function Stocks() {
 
               {stockInfo ? (
                 <>
-                  <div className="bg-gradient-to-r from-blue-900/30 to-surface rounded-xl p-6 mb-6 border border-blue-500/30">
+                  <div className="bg-gradient-to-r from-primary/30 to-surface rounded-xl p-6 mb-6 border border-accent/30">
                     <h2 className="text-2xl font-bold text-text-primary">{stockInfo.name || selectedStock}</h2>
                     <p className="text-text-muted">{stockInfo.sector || 'N/A'} · {stockInfo.industry || 'N/A'} · NSE: {selectedStock}</p>
                   </div>
@@ -495,7 +495,7 @@ export default function Stocks() {
 
                   {indicators && (
                     <>
-                      <h3 className="text-lg font-semibold text-blue-400 border-l-4 border-blue-500 pl-3 mb-4">Technical Signals</h3>
+                      <h3 className="text-lg font-semibold text-accent border-l-4 border-accent pl-3 mb-4">Technical Signals</h3>
                       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                         <div className="bg-background/50 rounded-xl p-4 text-center border border-secondary">
                           <p className="text-text-muted text-xs mb-1">RSI (14)</p>
@@ -515,7 +515,7 @@ export default function Stocks() {
                         </div>
                         <div className="bg-background/50 rounded-xl p-4 text-center border border-secondary">
                           <p className="text-text-muted text-xs mb-1">Volume Ratio</p>
-                          <p className="text-lg font-bold text-blue-400">{indicators.volume_ratio || 'N/A'}x</p>
+                          <p className="text-lg font-bold text-accent">{indicators.volume_ratio || 'N/A'}x</p>
                         </div>
                         <div className="bg-background/50 rounded-xl p-4 text-center border border-secondary">
                           <p className="text-text-muted text-xs mb-1">Beta</p>
@@ -595,7 +595,7 @@ export default function Stocks() {
                     <select
                       value={riskProfile}
                       onChange={(e) => setRiskProfile(e.target.value)}
-                      className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-blue-500 cursor-pointer"
+                      className="px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-accent cursor-pointer"
                     >
                       <option value="Conservative">Conservative</option>
                       <option value="Moderate">Moderate</option>
@@ -606,13 +606,13 @@ export default function Stocks() {
                   <button
                     onClick={generateMarketInsight}
                     disabled={insightLoading}
-                    className="w-full px-6 py-4 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full px-6 py-4 bg-accent text-white font-semibold rounded-xl hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {insightLoading ? 'Generating...' : 'Generate Market Insight'}
                   </button>
 
                   {marketInsight && (
-                    <div className="bg-gradient-to-r from-blue-900/30 to-surface border border-blue-500/30 rounded-xl p-6">
+                    <div className="bg-gradient-to-r from-primary/30 to-surface border border-accent/30 rounded-xl p-6">
                       <p className="text-text-secondary whitespace-pre-wrap leading-relaxed">{marketInsight}</p>
                     </div>
                   )}
@@ -624,7 +624,7 @@ export default function Stocks() {
                         <p className="text-text-muted text-sm">Ask me anything about the Indian stock market!</p>
                       ) : (
                         chatMessages.map((msg, i) => (
-                          <div key={i} className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-blue-500/20 ml-8' : 'bg-background/50 mr-8'}`}>
+                          <div key={i} className={`p-3 rounded-lg ${msg.role === 'user' ? 'bg-accent/20 ml-8' : 'bg-background/50 mr-8'}`}>
                             <p className="text-sm text-text-primary">{msg.content}</p>
                           </div>
                         ))
@@ -642,13 +642,13 @@ export default function Stocks() {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         placeholder="Ask about stocks, market trends..."
-                        className="flex-1 px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500"
+                        className="flex-1 px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                         disabled={chatLoading}
                       />
                       <button
                         type="submit"
                         disabled={chatLoading || !chatInput.trim()}
-                        className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-6 py-3 bg-accent text-white font-semibold rounded-xl hover:bg-accent transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Send
                       </button>
@@ -657,12 +657,12 @@ export default function Stocks() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-gradient-to-r from-blue-900/30 to-surface border border-blue-500/30 rounded-xl p-6">
-                    <h4 className="text-lg font-semibold text-blue-400 mb-3">How to Use AI Insights</h4>
+                  <div className="bg-gradient-to-r from-primary/30 to-surface border border-accent/30 rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-accent mb-3">How to Use AI Insights</h4>
                     <ol className="text-text-secondary text-sm space-y-3">
                       <li>1. Set your <b className="text-text-primary">risk profile</b> to get personalized advice</li>
-                      <li>2. Click <b className="text-blue-400">Generate Market Insight</b> for daily overview</li>
-                      <li>3. Use <b className="text-blue-400">Chat</b> to ask questions about stocks</li>
+                      <li>2. Click <b className="text-accent">Generate Market Insight</b> for daily overview</li>
+                      <li>3. Use <b className="text-accent">Chat</b> to ask questions about stocks</li>
                     </ol>
                     <p className="text-yellow-400 text-xs mt-4">⚠️ This is educational content, not financial advice. Always DYOR.</p>
                   </div>

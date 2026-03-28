@@ -5,7 +5,7 @@ export default function CTA() {
     <section className="section-padding relative">
       <div className="container-custom">
         <div className="bg-gradient-to-br from-surface to-secondary rounded-3xl p-8 sm:p-12 lg:p-16 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
           
           <div className="relative z-10 text-center max-w-3xl mx-auto">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary mb-6">

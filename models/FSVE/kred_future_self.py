@@ -854,7 +854,7 @@ with st.sidebar:
     sleep       = st.selectbox("Sleep Quality", ["Poor","Average","Good"])
 
     st.markdown("---")
-    run_btn = st.button("🚀 Generate My Future", use_container_width=True)
+    run_btn = st.button(" Generate My Future", use_container_width=True)
 
 user = dict(
     country=country, age=age, gender=gender,
@@ -944,7 +944,7 @@ with tab1:
     st.markdown("### 📊 Behavioural Performance Dashboard")
     k1,k2,k3,k4 = st.columns(4)
     rb={"Low":"#34d399","Moderate":"#fbbf24","High":"#fb7185"}[s["risk"]]
-    ti={"Improving":"📈","Stable":"➡️","Declining":"📉"}[s["trend"]]
+    ti={"Improving":"📈","Stable":"➡️","Declining":""}[s["trend"]]
     tc={"Improving":"#34d399","Stable":"#e8b84b","Declining":"#fb7185"}[s["trend"]]
     with k1:
         st.markdown(f'<div class="kpi"><div class="kpi-label">Composite Score</div><div class="kpi-value" style="color:{_sc(s["composite"])};">{s["composite"]:.0f}</div><div class="kpi-sub">out of 100</div></div>',unsafe_allow_html=True)
