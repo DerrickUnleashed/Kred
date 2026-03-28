@@ -270,7 +270,7 @@ export default function Dashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ₹{
+              className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
                 activeTab === tab
                   ? 'bg-blue-500 text-white'
                   : 'bg-surface border border-secondary text-text-secondary hover:text-text-primary'
@@ -328,11 +328,11 @@ export default function Dashboard() {
                         outerRadius={100}
                         fill="#3B82F6"
                         dataKey="value"
-                        label={({ name, percent }) => `₹{name}: ₹{(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {essentialData.map((entry, index) => (
-                          <Cell key={`cell-₹{index}`} fill={ESSENTIAL_COLORS[index % ESSENTIAL_COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={ESSENTIAL_COLORS[index % ESSENTIAL_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
@@ -364,11 +364,11 @@ export default function Dashboard() {
                         outerRadius={100}
                         fill="#3B82F6"
                         dataKey="value"
-                        label={({ name, percent }) => `₹{name} ₹{(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {categoryData.map((entry, index) => (
-                          <Cell key={`cell-₹{index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
@@ -549,12 +549,12 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setProductForm({ ...productForm, is_essential: !productForm.is_essential })}
-                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ₹{
+                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ${
                       productForm.is_essential ? 'bg-blue-500' : 'bg-secondary'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform duration-200 ₹{
+                      className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform duration-200 ${
                         productForm.is_essential ? 'translate-x-0' : '-translate-x-6'
                       }`}
                     />
@@ -610,7 +610,7 @@ export default function Dashboard() {
                           <td className="py-3 px-4 text-text-primary">{product.name}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.category}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ₹{
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                               product.is_essential 
                                 ? 'bg-blue-500/20 text-blue-400' 
                                 : 'bg-orange-500/20 text-orange-400'
