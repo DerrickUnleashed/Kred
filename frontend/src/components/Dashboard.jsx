@@ -264,16 +264,16 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Monthly Income</p>
-                <p className="text-2xl font-bold text-blue-500">${parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-blue-500">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-400">${totalExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-red-400">₹{totalExpenses.toLocaleString()}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Remaining</p>
-                <p className={`text-2xl font-bold ${remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${remaining.toLocaleString()}
+                <p className={`text-2xl font-bold ₹{remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ₹{remaining.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -431,7 +431,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit ($)</label>
+                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit (₹)</label>
                     <input
                       type="number"
                       value={productForm.cost_per_unit}
@@ -492,8 +492,8 @@ export default function Dashboard() {
                           <td className="py-3 px-4 text-text-primary">{product.name}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.category}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.quantity}</td>
-                          <td className="py-3 px-4 text-text-secondary">${product.cost_per_unit}</td>
-                          <td className="py-3 px-4 text-blue-500 font-medium">${product.total_cost}</td>
+                          <td className="py-3 px-4 text-text-secondary">₹{product.cost_per_unit}</td>
+                          <td className="py-3 px-4 text-blue-500 font-medium">₹{product.total_cost}</td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
                               <button
