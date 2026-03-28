@@ -32,6 +32,93 @@ const CATEGORIES = [
 const COLORS = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554', '#3B82F680'];
 const ESSENTIAL_COLORS = ['#3B82F6', '#F97316'];
 
+const computeDynamicLimit = (monthlyIncome, expectedSavings, products, totalExpenses) => {
+  const income = parseFloat(monthlyIncome) || 0;
+  const savings = parseFloat(expectedSavings) || 0;
+  const savingsRatio = income > 0 ? savings / income : 0.2;
+  
+  const usable = income * (1 - savingsRatio);
+  const baseLimit = usable / 30;
+  
+  const now = new Date();
+  const hoursPassedToday = now.getHours() + now.getMinutes() / 60;
+  const today = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysPassedMonth = today;
+  const daysLeftMonth = Math.max(daysInMonth - daysPassedMonth, 0);
+  
+  const essentialCount = products.filter(p => p.is_essential).length;
+  const nonEssentialCount = products.filter(p => !p.is_essential).length;
+  const impulsiveRatio = products.length > 0 ? nonEssentialCount / products.length : 0;
+  
+  const dayOfWeek = now.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const isEvening = hoursPassedToday >= 18;
+  
+  let behaviorFactor = 1.0;
+  if (impulsiveRatio > 0.5) behaviorFactor = 0.7;
+  else if (impulsiveRatio > 0.3) behaviorFactor = 0.85;
+  
+  let contextFactor = 1.0;
+  if (isEvening && hoursPassedToday >= 21) contextFactor = 0.6;
+  else if (isEvening) contextFactor = 0.8;
+  if (isWeekend) contextFactor *= 0.9;
+  
+  const remainingBudget = Math.max(usable - totalExpenses, 0);
+  const monthlyRemaining = remainingBudget;
+  const weeklyRemaining = remainingBudget * 7 / 30;
+  const categoryRemaining = remainingBudget;
+  
+  const monthlyConstraint = daysLeftMonth > 0 ? monthlyRemaining / daysLeftMonth : 0;
+  const weeklyConstraint = weeklyRemaining / Math.max(7 - dayOfWeek, 1);
+  
+  const constraintLimit = Math.min(monthlyConstraint, weeklyConstraint, categoryRemaining);
+  
+  const goalFactor = savingsRatio >= 0.2 ? 1.0 : savingsRatio >= 0.1 ? 0.85 : 0.7;
+  
+  const adjustedLimit = baseLimit * behaviorFactor * contextFactor * goalFactor;
+  const finalLimit = Math.min(adjustedLimit, constraintLimit);
+  
+  const prevLimit = baseLimit;
+  const smoothedLimit = 0.7 * prevLimit + 0.3 * finalLimit;
+  
+  const minLimit = 0.6 * baseLimit;
+  const maxLimit = baseLimit;
+  const boundedLimit = Math.max(Math.min(smoothedLimit, maxLimit), minLimit);
+  
+  const currentHourlySpend = products.reduce((sum, p) => sum + (p.total_cost || 0), 0) / Math.max(hoursPassedToday, 1);
+  const estimatedDailySpend = currentHourlySpend * 24;
+  const spentToday = Math.min(estimatedDailySpend, totalExpenses);
+  
+  const safeSpendNow = Math.max(boundedLimit - spentToday, 0);
+  
+  const limitRatio = boundedLimit / baseLimit;
+  let status = 'tight';
+  if (limitRatio > 0.8) status = 'relaxed';
+  else if (limitRatio > 0.5) status = 'moderate';
+  
+  const explanation = {};
+  if (behaviorFactor < 0.7) explanation.behavior = 'High impulsive spending detected';
+  if (contextFactor < 0.7) explanation.context = 'Evening or weekend spending risk';
+  if (goalFactor < 0.85) explanation.goal = 'Savings goal pressure is high';
+  
+  return {
+    dynamic_limit: Math.round(boundedLimit),
+    safe_spend_now: Math.round(safeSpendNow),
+    status,
+    behavior_factor: behaviorFactor.toFixed(2),
+    context_factor: contextFactor.toFixed(2),
+    goal_factor: goalFactor.toFixed(2),
+    explanation,
+    base_limit: Math.round(baseLimit),
+    spent_today: Math.round(spentToday),
+    remaining_budget: Math.round(remainingBudget),
+    impulsive_ratio: (impulsiveRatio * 100).toFixed(0),
+    essential_count: essentialCount,
+    non_essential_count: nonEssentialCount,
+  };
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -266,7 +353,7 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-wrap gap-2 mb-8">
-          {['overview', 'products', 'income'].map((tab) => (
+          {['overview', 'products', 'income', 'dynamic-limit'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -643,6 +730,203 @@ export default function Dashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'dynamic-limit' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(() => {
+                const limitData = computeDynamicLimit(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Daily Dynamic Limit</p>
+                      <p className="text-3xl font-bold text-blue-500">₹{limitData.dynamic_limit.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Safe to Spend Now</p>
+                      <p className={`text-3xl font-bold ${limitData.safe_spend_now > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ₹{limitData.safe_spend_now.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Status</p>
+                      <span className={`inline-block px-3 py-1 text-lg font-semibold rounded-full ${
+                        limitData.status === 'relaxed' ? 'bg-green-500/20 text-green-400' :
+                        limitData.status === 'moderate' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {limitData.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Decision Factors</h3>
+              {(() => {
+                const limitData = computeDynamicLimit(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-background/50 rounded-xl p-4">
+                      <p className="text-text-muted text-sm mb-2">Behavior Factor</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              parseFloat(limitData.behavior_factor) >= 0.85 ? 'bg-green-500' :
+                              parseFloat(limitData.behavior_factor) >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${parseFloat(limitData.behavior_factor) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-text-primary font-semibold">{limitData.behavior_factor}</span>
+                      </div>
+                      <p className="text-text-muted text-xs mt-2">
+                        {parseFloat(limitData.behavior_factor) >= 0.85 ? 'Good spending habits' :
+                         parseFloat(limitData.behavior_factor) >= 0.7 ? 'Moderate risk' : 'High impulsive spending'}
+                      </p>
+                    </div>
+                    <div className="bg-background/50 rounded-xl p-4">
+                      <p className="text-text-muted text-sm mb-2">Context Factor</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              parseFloat(limitData.context_factor) >= 0.85 ? 'bg-green-500' :
+                              parseFloat(limitData.context_factor) >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${parseFloat(limitData.context_factor) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-text-primary font-semibold">{limitData.context_factor}</span>
+                      </div>
+                      <p className="text-text-muted text-xs mt-2">
+                        {parseFloat(limitData.context_factor) >= 0.85 ? 'Low risk time' :
+                         parseFloat(limitData.context_factor) >= 0.7 ? 'Moderate risk' : 'High risk time (evening/weekend)'}
+                      </p>
+                    </div>
+                    <div className="bg-background/50 rounded-xl p-4">
+                      <p className="text-text-muted text-sm mb-2">Goal Factor</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all ${
+                              parseFloat(limitData.goal_factor) >= 0.85 ? 'bg-green-500' :
+                              parseFloat(limitData.goal_factor) >= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${parseFloat(limitData.goal_factor) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-text-primary font-semibold">{limitData.goal_factor}</span>
+                      </div>
+                      <p className="text-text-muted text-xs mt-2">
+                        {parseFloat(limitData.goal_factor) >= 0.85 ? 'On track for savings' :
+                         parseFloat(limitData.goal_factor) >= 0.7 ? 'Some savings pressure' : 'High savings goal pressure'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Insights & Recommendations</h3>
+              {(() => {
+                const limitData = computeDynamicLimit(monthlyIncome, expectedSavings, products, totalExpenses);
+                const insights = [];
+                
+                if (limitData.explanation.behavior) {
+                  insights.push({ type: 'warning', text: limitData.explanation.behavior });
+                }
+                if (limitData.explanation.context) {
+                  insights.push({ type: 'warning', text: limitData.explanation.context });
+                }
+                if (limitData.explanation.goal) {
+                  insights.push({ type: 'warning', text: limitData.explanation.goal });
+                }
+                
+                if (limitData.safe_spend_now === 0) {
+                  insights.push({ type: 'error', text: "You've reached today's limit. Avoid further spending." });
+                } else if (limitData.safe_spend_now < 100) {
+                  insights.push({ type: 'warning', text: 'Low remaining spend. Be cautious with purchases.' });
+                } else {
+                  insights.push({ type: 'success', text: 'You are within a safe spending range.' });
+                }
+                
+                if (limitData.impulsive_ratio > 50) {
+                  insights.push({ type: 'warning', text: `${limitData.impulsive_ratio}% of your purchases are non-essential. Consider reducing impulsive buying.` });
+                }
+                
+                if (insights.length === 0) {
+                  insights.push({ type: 'success', text: 'All factors look healthy. Keep up the good financial habits!' });
+                }
+                
+                return (
+                  <div className="space-y-3">
+                    {insights.map((insight, index) => (
+                      <div 
+                        key={index}
+                        className={`p-4 rounded-xl flex items-start gap-3 ${
+                          insight.type === 'error' ? 'bg-red-500/10 border border-red-500/30' :
+                          insight.type === 'warning' ? 'bg-yellow-500/10 border border-yellow-500/30' :
+                          'bg-green-500/10 border border-green-500/30'
+                        }`}
+                      >
+                        <span className={`text-xl ${
+                          insight.type === 'error' ? 'text-red-400' :
+                          insight.type === 'warning' ? 'text-yellow-400' :
+                          'text-green-400'
+                        }`}>
+                          {insight.type === 'error' ? '🚨' : insight.type === 'warning' ? '⚠️' : '✅'}
+                        </span>
+                        <p className={`text-sm ${
+                          insight.type === 'error' ? 'text-red-300' :
+                          insight.type === 'warning' ? 'text-yellow-300' :
+                          'text-green-300'
+                        }`}>
+                          {insight.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Spending Analysis</h3>
+              {(() => {
+                const limitData = computeDynamicLimit(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-background/50 rounded-xl">
+                      <p className="text-text-muted text-sm mb-1">Base Limit</p>
+                      <p className="text-xl font-bold text-text-primary">₹{limitData.base_limit.toLocaleString()}</p>
+                      <p className="text-text-muted text-xs">per day</p>
+                    </div>
+                    <div className="text-center p-4 bg-background/50 rounded-xl">
+                      <p className="text-text-muted text-sm mb-1">Spent Today</p>
+                      <p className="text-xl font-bold text-orange-400">₹{limitData.spent_today.toLocaleString()}</p>
+                      <p className="text-text-muted text-xs">estimated</p>
+                    </div>
+                    <div className="text-center p-4 bg-background/50 rounded-xl">
+                      <p className="text-text-muted text-sm mb-1">Month Budget Left</p>
+                      <p className="text-xl font-bold text-green-400">₹{limitData.remaining_budget.toLocaleString()}</p>
+                      <p className="text-text-muted text-xs">remaining</p>
+                    </div>
+                    <div className="text-center p-4 bg-background/50 rounded-xl">
+                      <p className="text-text-muted text-sm mb-1">Non-Essential</p>
+                      <p className="text-xl font-bold text-orange-400">{limitData.impulsive_ratio}%</p>
+                      <p className="text-text-muted text-xs">of purchases</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
