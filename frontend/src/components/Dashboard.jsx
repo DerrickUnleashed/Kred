@@ -474,6 +474,12 @@ export default function Dashboard() {
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          <Link
+            to="/stocks"
+            className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-blue-500 hover:border-blue-500 transition-colors"
+          >
+            Stocks
+          </Link>
         </div>
 
         {activeTab === 'overview' && (
