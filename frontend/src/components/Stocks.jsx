@@ -279,7 +279,7 @@ export default function Stocks() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400">🚀 Top Gainers</h2>
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400"> Top Gainers</h2>
                 {marketData.gainers.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.gainers.map((g) => (
@@ -301,7 +301,7 @@ export default function Stocks() {
               </div>
 
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400">📉 Top Losers</h2>
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400"> Top Losers</h2>
                 {marketData.losers.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.losers.map((l) => (
