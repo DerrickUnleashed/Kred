@@ -1,640 +1,802 @@
 """
-KRED Future Self Visualization Engine
-Generates realistic future lifestyle visualizations based on financial projections.
+KRED Future Self Visualization Engine — Streamlit App
+AI-based facial age progression with visual awareness insights.
 
 Usage:
-    python kred_engine.py
-    python kred_engine.py --name "Prannav" --age 20 --income 2000 --expenses 1000 --savings 0
-    python kred_engine.py --ref-image "C:/path/to/dummy.jpeg"
-    python kred_engine.py --help
+    streamlit run app.py
+
+Requirements:
+    pip install streamlit pillow anthropic requests python-dotenv
 """
 
 import os
-import sys
-import json
-import math
-import argparse
 import io
 import base64
+import json
 import random
+import datetime
 from pathlib import Path
-from datetime import datetime
+
+import streamlit as st
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance, ImageOps
+import requests
 from dotenv import load_dotenv
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageEnhance
 
 load_dotenv()
 
-# ─── Constants ────────────────────────────────────────────────────────────────
-ANNUAL_RETURN   = 0.10
-INFLATION_RATE  = 0.06
-TARGET_AGES     = [30, 40, 50, 60]
-OUTPUT_DIR      = Path("kred_output")
+# ─── Constants ─────────────────────────────────────────────────────────────────
+BASE_OUTPUT_DIR = Path("models/FSVE")
+AGE_FOLDERS = {
+    "original": "original",
+    "aged_40":  "aged_40",
+    "aged_60":  "aged_60",
+    "aged_80":  "aged_80",
+}
+TARGET_AGES = [40, 60, 80]
 
-# Models
-IMG2IMG_MODEL   = "lllyasviel/control_v11p_sd15_openpose"   # ControlNet (pose-aware)
-TXT2IMG_MODEL   = "black-forest-labs/FLUX.1-schnell"        # Fallback text-to-image
-IP_ADAPTER_MODEL = "h94/IP-Adapter"                         # Face-preserving adapter
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 
-# Wealth thresholds (in INR) for lifestyle classification
-THRESHOLDS = {
-    "Comfortable": 5_000_000,   # 50 Lakhs+
-    "Stable":      1_000_000,   # 10–50 Lakhs
-    # Below Stable → At Risk
+# ─── Page Config ───────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="KRED · Future Self Engine",
+    page_icon="🔬",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ─── Global Styles ─────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+/* ── Base ── */
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
+.stApp {
+    background: #0a0a0f;
+    color: #e8e6f0;
 }
 
+/* ── Header ── */
+.kred-header {
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a0a2e 50%, #0d1a1a 100%);
+    border: 1px solid rgba(180,100,255,0.2);
+    border-radius: 16px;
+    padding: 2.5rem 2rem 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+.kred-header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(120,60,255,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.kred-header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(0,200,180,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.kred-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.6rem;
+    letter-spacing: -0.03em;
+    background: linear-gradient(90deg, #b87fff, #00c8b0, #b87fff);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s ease infinite;
+    position: relative; z-index:1;
+}
+@keyframes shimmer { 0%,100%{background-position:0%} 50%{background-position:100%} }
+.kred-sub {
+    font-weight: 300;
+    font-size: 1rem;
+    color: rgba(220,215,240,0.65);
+    margin-top: .4rem;
+    position: relative; z-index:1;
+}
 
-# ─── Reference Image Handling ─────────────────────────────────────────────────
+/* ── Cards ── */
+.card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.4rem;
+    margin-bottom: 1rem;
+}
+.age-card {
+    background: linear-gradient(145deg, rgba(20,10,40,0.9), rgba(10,20,30,0.9));
+    border: 1px solid rgba(180,100,255,0.25);
+    border-radius: 14px;
+    padding: 1rem;
+    text-align: center;
+    transition: transform .2s;
+}
+.age-card:hover { transform: translateY(-3px); }
+.age-label {
+    font-family: 'Syne', sans-serif;
+    font-size: .75rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: #b87fff;
+    margin-bottom: .4rem;
+}
 
-def load_reference_image(ref_path: str | None) -> Image.Image | None:
-    """
-    Load the user's reference photo from disk.
-    Resizes to 512x512 (standard diffusion input) and returns PIL Image.
-    Returns None if path is not provided or file doesn't exist.
-    """
-    if not ref_path:
-        return None
+/* ── Risk badges ── */
+.risk-low    { background:#0d2e1a; border:1px solid #22c55e; color:#22c55e; padding:.3rem .9rem; border-radius:999px; font-size:.85rem; font-weight:600; display:inline-block; }
+.risk-moderate { background:#2e1f0d; border:1px solid #f59e0b; color:#f59e0b; padding:.3rem .9rem; border-radius:999px; font-size:.85rem; font-weight:600; display:inline-block; }
+.risk-high   { background:#2e0d0d; border:1px solid #ef4444; color:#ef4444; padding:.3rem .9rem; border-radius:999px; font-size:.85rem; font-weight:600; display:inline-block; }
 
-    path = Path(ref_path)
-    if not path.exists():
-        print(f"  [WARN] Reference image not found: {ref_path}")
-        return None
+/* ── Warning banner ── */
+.warning-banner {
+    background: linear-gradient(90deg, rgba(239,68,68,0.15), rgba(251,146,60,0.12));
+    border-left: 3px solid #ef4444;
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+    font-size: .95rem;
+}
 
-    try:
-        img = Image.open(path).convert("RGB")
-        img = img.resize((512, 512), Image.LANCZOS)
-        print(f"  [REF] Loaded reference image: {path.name} → resized to 512×512")
-        return img
-    except Exception as e:
-        print(f"  [WARN] Could not load reference image: {e}")
-        return None
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: #0d0d1a !important;
+    border-right: 1px solid rgba(180,100,255,0.15);
+}
+section[data-testid="stSidebar"] .block-container { padding-top: 2rem; }
+.sidebar-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #b87fff;
+    letter-spacing: .06em;
+    margin-bottom: 1.2rem;
+}
+
+/* ── Buttons ── */
+.stButton > button {
+    background: linear-gradient(135deg, #7c3aed, #0891b2) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-family: 'Syne', sans-serif !important;
+    font-weight: 600 !important;
+    letter-spacing: .04em !important;
+    padding: .6rem 1.4rem !important;
+    transition: opacity .2s !important;
+}
+.stButton > button:hover { opacity: .85 !important; }
+
+/* ── Progress ── */
+.stProgress > div > div { background: linear-gradient(90deg, #7c3aed, #00c8b0) !important; }
+
+/* ── Divider ── */
+hr { border-color: rgba(255,255,255,0.08) !important; }
+
+/* ── Insight box ── */
+.insight-box {
+    background: rgba(124,58,237,0.08);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    margin: .6rem 0;
+    font-size: .92rem;
+    line-height: 1.65;
+}
+.insight-box h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: .85rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #b87fff;
+    margin: 0 0 .6rem;
+}
+</style>
+""", unsafe_allow_html=True)
 
 
-def image_to_base64(img: Image.Image) -> str:
-    """Encode a PIL Image to base64 string (PNG format)."""
+# ─── Helpers ───────────────────────────────────────────────────────────────────
+
+def pil_to_b64(img: Image.Image, fmt: str = "PNG") -> str:
     buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
+    img.save(buf, format=fmt)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
-# ─── Financial Simulation ─────────────────────────────────────────────────────
-
-def simulate_wealth(current_age: int, monthly_income: float, monthly_expenses: float,
-                    current_savings: float, savings_rate: float = 0.02) -> dict:
-    """
-    Project wealth at each target age using compound interest.
-    Returns dict: {age: {"wealth": float, "real_wealth": float, "monthly_savings": float}}
-    """
-    monthly_savings = monthly_income * savings_rate
-    annual_savings  = monthly_savings * 12
-    results = {}
-
-    for target_age in TARGET_AGES:
-        if target_age <= current_age:
-            continue
-        years = target_age - current_age
-
-        fv_current       = current_savings * ((1 + ANNUAL_RETURN) ** years)
-        fv_contributions = annual_savings * (
-            ((1 + ANNUAL_RETURN) ** years - 1) / ANNUAL_RETURN
-        )
-        nominal_wealth = fv_current + fv_contributions
-        real_wealth    = nominal_wealth / ((1 + INFLATION_RATE) ** years)
-
-        results[target_age] = {
-            "wealth":          nominal_wealth,
-            "real_wealth":     real_wealth,
-            "monthly_savings": monthly_savings,
-            "years":           years,
-        }
-
-    return results
+def b64_to_pil(b64: str) -> Image.Image:
+    return Image.open(io.BytesIO(base64.b64decode(b64)))
 
 
-def simulate_improved(current_age: int, monthly_income: float, monthly_expenses: float,
-                      current_savings: float, savings_rate: float = 0.02) -> dict:
-    """Improved scenario: +15% savings rate, -10% expenses."""
-    improved_savings_rate   = savings_rate + 0.15
-    improved_expenses       = monthly_expenses * 0.90
-    improved_monthly_savings = monthly_income * improved_savings_rate
-    annual_savings          = improved_monthly_savings * 12
-    results = {}
-
-    for target_age in TARGET_AGES:
-        if target_age <= current_age:
-            continue
-        years = target_age - current_age
-        fv_current       = current_savings * ((1 + ANNUAL_RETURN) ** years)
-        fv_contributions = annual_savings * (
-            ((1 + ANNUAL_RETURN) ** years - 1) / ANNUAL_RETURN
-        )
-        nominal_wealth = fv_current + fv_contributions
-        real_wealth    = nominal_wealth / ((1 + INFLATION_RATE) ** years)
-
-        results[target_age] = {
-            "wealth":          nominal_wealth,
-            "real_wealth":     real_wealth,
-            "monthly_savings": improved_monthly_savings,
-            "years":           years,
-            "saved_expenses":  monthly_expenses - improved_expenses,
-        }
-
-    return results
+def ensure_output_dirs(username: str = "user") -> dict:
+    dirs = {}
+    for key, folder in AGE_FOLDERS.items():
+        p = BASE_OUTPUT_DIR / folder
+        p.mkdir(parents=True, exist_ok=True)
+        dirs[key] = p
+    return dirs
 
 
-# ─── Lifestyle Classification ──────────────────────────────────────────────────
-
-def classify_lifestyle(real_wealth: float) -> str:
-    if real_wealth >= THRESHOLDS["Comfortable"]:
-        return "Comfortable"
-    elif real_wealth >= THRESHOLDS["Stable"]:
-        return "Stable"
-    else:
-        return "At Risk"
-
-
-# ─── Aging Feature Descriptions ───────────────────────────────────────────────
-
-AGE_FEATURES = {
-    30: "slight maturity, minimal forehead lines, fuller face, early confidence in eyes",
-    40: "mild wrinkles around eyes and forehead, slight greying at temples, defined jaw",
-    50: "visible wrinkles, salt-and-pepper hair, aged skin texture, deeper expression lines",
-    60: "strong wrinkles, mostly grey or white hair, aged and weathered skin, deep life experience in eyes",
-}
-
-
-# ─── Visual Mapping ───────────────────────────────────────────────────────────
-
-LIFESTYLE_VISUALS = {
-    "Comfortable": {
-        "clothing":    "premium tailored formal suit, luxury watch, polished shoes",
-        "environment": "modern luxury penthouse interior with floor-to-ceiling windows, city skyline view, expensive minimalist furniture",
-        "expression":  "confident, relaxed, successful smile, proud posture",
-        "lighting":    "warm golden hour ambient lighting",
-        "bg_color":    (180, 140, 60),
-    },
-    "Stable": {
-        "clothing":    "clean pressed business casual shirt and trousers",
-        "environment": "comfortable middle-class Indian home interior, tidy living room, family photos on wall",
-        "expression":  "calm, content, gentle smile, composed demeanor",
-        "lighting":    "soft natural daylight from windows",
-        "bg_color":    (60, 120, 160),
-    },
-    "At Risk": {
-        "clothing":    "simple plain shirt, slightly worn fabric, modest appearance",
-        "environment": "modest home with bare walls, basic sparse furniture, aging paint",
-        "expression":  "tired, stressed expression, worried eyes, tense posture",
-        "lighting":    "dim harsh overhead lighting, shadows on face",
-        "bg_color":    (80, 80, 90),
-    },
-}
+def save_outputs(images: dict, username: str = "user") -> dict:
+    """Save {label: PIL.Image} dict. Returns {label: path}."""
+    dirs   = ensure_output_dirs(username)
+    ts     = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    saved  = {}
+    label_map = {
+        "original": "original",
+        "aged_40":  "aged_40",
+        "aged_60":  "aged_60",
+        "aged_80":  "aged_80",
+    }
+    for key, img in images.items():
+        folder = dirs.get(key)
+        if folder and img is not None:
+            fname = f"{username}_{ts}.png"
+            path  = folder / fname
+            img.save(path)
+            saved[key] = str(path)
+    return saved
 
 
-# ─── Prompt Builder ───────────────────────────────────────────────────────────
+# ─── Model / Image Generation ──────────────────────────────────────────────────
 
-def build_prompt(name: str, age: int, lifestyle: str) -> str:
-    aging = AGE_FEATURES.get(age, "natural aging")
-    v = LIFESTYLE_VISUALS[lifestyle]
-    return (
-        f"A realistic portrait of the same Indian man, now {age} years old, "
-        f"showing clear natural aging with {aging}. "
-        f"The person represents a {lifestyle} lifestyle, "
-        f"wearing {v['clothing']}, "
-        f"standing in a {v['environment']}, "
-        f"with {v['expression']}, {v['lighting']}. "
-        f"Photorealistic, ultra detailed, natural skin texture, "
-        f"DSLR quality, 8k, no fantasy elements, grounded and believable. "
-        f"Same face, same identity as the reference person, aged {age} years."
-    )
-
-
-def build_negative_prompt() -> str:
-    return (
-        "different person, wrong face, cartoon, anime, illustration, "
-        "fantasy, extra limbs, deformed, blurry, low quality, watermark, "
-        "text, logo, unrealistic, painting, drawing"
-    )
-
-
-# ─── Image Generation — with Reference Image (img2img / IP-Adapter) ───────────
-
-def generate_image_with_reference(prompt: str, ref_image: Image.Image) -> Image.Image | None:
-    """
-    Generate an aged/styled image conditioned on the reference face.
-
-    Strategy (tries in order):
-      1. HuggingFace InferenceClient image-to-image  (img2img)
-      2. Replicate API with face-preserving model    (if REPLICATE_API_TOKEN set)
-    Returns PIL Image or None on failure.
-    """
-
-    # ── Attempt 1: HuggingFace img2img ──────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def load_hf_client():
+    """Lazy-load HuggingFace InferenceClient (cached across reruns)."""
     try:
         from huggingface_hub import InferenceClient
-        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
-        client   = InferenceClient(token=hf_token)
-
-        # Convert reference image to bytes for the API
-        buf = io.BytesIO()
-        ref_image.save(buf, format="PNG")
-        buf.seek(0)
-        ref_bytes = buf.read()
-
-        print("    [HF img2img] Sending request...", end=" ", flush=True)
-        result = client.image_to_image(
-            image=ref_bytes,
-            prompt=prompt,
-            negative_prompt=build_negative_prompt(),
-            model="stabilityai/stable-diffusion-xl-refiner-1.0",
-            strength=0.65,          # 0 = identical to ref, 1 = fully reimagined
-            guidance_scale=7.5,
-        )
-
-        if isinstance(result, Image.Image):
-            print("✓")
-            return result
-        return Image.open(io.BytesIO(result))
-
-    except Exception as e:
-        print(f"✗ ({e})")
-
-    # ── Attempt 2: Replicate face-swapping / aging model ────────────────────
-    replicate_token = os.getenv("REPLICATE_API_TOKEN")
-    if replicate_token:
-        try:
-            import replicate
-
-            print("    [Replicate] Sending request...", end=" ", flush=True)
-            ref_b64  = image_to_base64(ref_image)
-            data_uri = f"data:image/png;base64,{ref_b64}"
-
-            output = replicate.run(
-                # Face-conditioned aging model on Replicate
-                "fofr/face-to-many:a07f252abbbd832009640b27f063ea52d87d7a23ce5e2f94202a2b5f3b1f8b5",
-                input={
-                    "image":         data_uri,
-                    "prompt":        prompt,
-                    "negative_prompt": build_negative_prompt(),
-                    "style":         "Photographic",
-                    "guidance_scale": 7.5,
-                    "ip_adapter_scale": 0.8,
-                }
-            )
-            # output is typically a list of URLs
-            if output:
-                import urllib.request
-                url = output[0] if isinstance(output, list) else output
-                with urllib.request.urlopen(str(url)) as resp:
-                    img_bytes = resp.read()
-                print("✓")
-                return Image.open(io.BytesIO(img_bytes))
-
-        except Exception as e:
-            print(f"✗ ({e})")
-
-    return None
-
-
-# ─── Image Generation — Text-Only Fallback ────────────────────────────────────
-
-def generate_image_hf(prompt: str) -> Image.Image | None:
-    """Text-to-image via HuggingFace Inference API (no reference). Returns PIL Image or None."""
-    try:
-        from huggingface_hub import InferenceClient
-        hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
-        client   = InferenceClient(token=hf_token)
-
-        print("    [HF txt2img] Sending request...", end=" ", flush=True)
-        result = client.text_to_image(prompt=prompt, model=TXT2IMG_MODEL)
-        print("✓")
-
-        if isinstance(result, Image.Image):
-            return result
-        return Image.open(io.BytesIO(result))
-
-    except Exception as e:
-        print(f"✗ ({e})")
+        token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
+        return InferenceClient(token=token)
+    except Exception:
         return None
 
 
-# ─── Placeholder Image Generator ─────────────────────────────────────────────
-
-def generate_placeholder(name: str, age: int, lifestyle: str, wealth: float,
-                          ref_image: Image.Image | None = None) -> Image.Image:
-    """
-    Styled placeholder image.
-    If ref_image is provided, it is composited into the placeholder so the
-    person's face is still visible even when API calls fail.
-    """
-    W, H = 1024, 1024
-    img  = Image.new("RGB", (W, H), color=(20, 20, 30))
-    draw = ImageDraw.Draw(img)
-    v    = LIFESTYLE_VISUALS[lifestyle]
-    bg   = v["bg_color"]
-
-    # Background gradient
-    for i in range(H):
-        t = i / H
-        r = int(bg[0] * (1 - t) + 10 * t)
-        g = int(bg[1] * (1 - t) + 10 * t)
-        b = int(bg[2] * (1 - t) + 10 * t)
-        draw.line([(0, i), (W, i)], fill=(r, g, b))
-
-    # ── Embed reference image (circular crop) if available ──────────────────
-    if ref_image is not None:
-        face_size = 420
-        face      = ref_image.resize((face_size, face_size), Image.LANCZOS)
-
-        # Apply aging effect: desaturate + darken slightly per decade
-        decade_factor = (age - 20) / 40.0  # 0.0 at 20, 1.0 at 60
-        enhancer = ImageEnhance.Color(face)
-        face = enhancer.enhance(1.0 - decade_factor * 0.4)  # reduce saturation
-        enhancer = ImageEnhance.Brightness(face)
-        face = enhancer.enhance(1.0 - decade_factor * 0.15)
-
-        # Circular mask
-        mask = Image.new("L", (face_size, face_size), 0)
-        mask_draw = ImageDraw.Draw(mask)
-        mask_draw.ellipse([0, 0, face_size, face_size], fill=255)
-        mask = mask.filter(ImageFilter.GaussianBlur(4))  # soft edge
-
-        # Paste centered, above text bar
-        cx = (W - face_size) // 2
-        cy = (H - 200 - face_size) // 2
-        img.paste(face, (cx, cy), mask)
-
-        # Age-wrinkle texture overlay (semi-transparent lines)
-        overlay     = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        over_draw   = ImageDraw.Draw(overlay)
-        line_count  = {30: 0, 40: 4, 50: 8, 60: 13}.get(age, 0)
-        face_cx     = cx + face_size // 2
-        face_cy     = cy + face_size // 2
-        for i in range(line_count):
-            y = face_cy - 60 + i * 14
-            alpha = 60 + i * 8
-            over_draw.arc(
-                [face_cx - 90 + i * 2, y, face_cx + 90 - i * 2, y + 10],
-                start=0, end=180, fill=(30, 20, 15, alpha), width=1,
-            )
-        img = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
-
-    else:
-        # Original silhouette fallback (no reference image)
-        cx, cy  = W // 2, H // 2 - 80
-        face_r  = 160
-        body_h  = 300
-        draw.ellipse([cx - 120, cy + face_r - 20, cx + 120, cy + face_r + body_h],
-                     fill=(40, 40, 50))
-        draw.ellipse([cx - face_r, cy - face_r, cx + face_r, cy + face_r],
-                     fill=(60, 45, 35))
-        line_count = {30: 0, 40: 3, 50: 6, 60: 10}.get(age, 0)
-        for i in range(line_count):
-            y = cy - face_r + 60 + i * 12
-            draw.arc([cx - 80 + i * 2, y, cx + 80 - i * 2, y + 8],
-                     start=0, end=180, fill=(45, 32, 24), width=1)
-
-    # Lifestyle accent border
-    border_color = {
-        "Comfortable": (212, 175, 55),
-        "Stable":      (70, 160, 200),
-        "At Risk":     (180, 60, 60),
-    }[lifestyle]
-    draw = ImageDraw.Draw(img)
-    for t in range(6):
-        draw.rectangle([t, t, W - t, H - t], outline=border_color)
-
-    _draw_overlay(draw, name, age, wealth, lifestyle, W, H)
-    img = _add_grain(img, intensity=18)
-    return img
+def preprocess_image(img: Image.Image, size: int = 512) -> Image.Image:
+    """Resize + convert to RGB. Crops to square first."""
+    img = img.convert("RGB")
+    w, h = img.size
+    s = min(w, h)
+    img = img.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
+    return img.resize((size, size), Image.LANCZOS)
 
 
-def _add_grain(img: Image.Image, intensity: int = 15) -> Image.Image:
-    grain  = Image.new("L", img.size)
-    pixels = grain.load()
-    for x in range(img.width):
-        for y in range(img.height):
-            pixels[x, y] = random.randint(128 - intensity, 128 + intensity)
-    grain_rgb = Image.merge("RGB", [grain, grain, grain])
-    return Image.blend(img.convert("RGB"), grain_rgb, alpha=0.08)
+def build_age_prompt(target_age: int, gender: str, lifestyle: str,
+                     screen_time: str, eye_care: str) -> str:
+    """Build a rich conditioning prompt from user inputs."""
+    gender_desc = {"Male": "man", "Female": "woman", "Prefer not to say": "person"}[gender]
 
-
-# ─── Overlay Text ─────────────────────────────────────────────────────────────
-
-def _draw_overlay(draw: ImageDraw.Draw, name: str, age: int,
-                  wealth: float, lifestyle: str, W: int, H: int):
-    status_colors = {
-        "Comfortable": (212, 175, 55),
-        "Stable":      (100, 200, 255),
-        "At Risk":     (255, 90, 90),
+    lifestyle_mods = {
+        "Healthy":  "gracefully aged with healthy skin, minimal deep wrinkles, good posture, vibrant eyes",
+        "Average":  "naturally aged with moderate wrinkles, some sun spots, normal skin laxity",
+        "Risky":    "prematurely aged with deep wrinkles, dull sagging skin, tired hollowed face, weathered complexion",
     }
-    color = status_colors[lifestyle]
+    screen_mods = {
+        "Low":    "clear bright eyes, no under-eye bags",
+        "Medium": "slight under-eye circles, mild eye strain visible",
+        "High":   "pronounced under-eye bags, squinting lines, digital eye strain evident",
+    }
+    eye_care_mod = (
+        "clear healthy eyes with good scleral whites"
+        if eye_care == "Yes"
+        else "yellowed sclera, slight drooping eyelids, visible eye fatigue"
+    )
 
-    bar_h   = 180
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    bar_draw = ImageDraw.Draw(overlay)
-    bar_draw.rectangle([0, H - bar_h, W, H], fill=(0, 0, 0, 180))
+    return (
+        f"Ultra-realistic portrait of a {target_age}-year-old Indian {gender_desc}, "
+        f"same facial structure and bone proportions as the reference image, "
+        f"aged naturally to {target_age} years old, "
+        f"{lifestyle_mods[lifestyle]}, "
+        f"{screen_mods[screen_time]}, "
+        f"{eye_care_mod}. "
+        f"DSLR photograph, 8k, photorealistic skin texture, natural studio lighting, "
+        f"same identity and face shape, no cartoon, no fantasy, no makeup filters."
+    )
+
+
+def generate_aged_images(ref_img: Image.Image, current_age: int, gender: str,
+                          lifestyle: str, screen_time: str, eye_care: str,
+                          progress_bar=None) -> dict:
+    """
+    Generate aged versions. Tries HF img2img → styled placeholder fallback.
+    Returns {label: PIL.Image}
+    """
+    results = {"original": ref_img.copy()}
+    client  = load_hf_client()
+    steps   = len(TARGET_AGES)
+
+    age_labels = {40: "aged_40", 60: "aged_60", 80: "aged_80"}
+
+    for i, target_age in enumerate(TARGET_AGES):
+        label   = age_labels[target_age]
+        prompt  = build_age_prompt(target_age, gender, lifestyle, screen_time, eye_care)
+        neg     = ("cartoon, anime, illustration, painting, text, watermark, "
+                   "different person, deformed, extra limbs, blurry, low quality")
+        img = None
+
+        # ── Try HF img2img ──────────────────────────────────────────────────
+        if client:
+            try:
+                buf = io.BytesIO()
+                ref_img.save(buf, format="PNG")
+                buf.seek(0)
+                result = client.image_to_image(
+                    image=buf.read(),
+                    prompt=prompt,
+                    negative_prompt=neg,
+                    model="stabilityai/stable-diffusion-xl-refiner-1.0",
+                    strength=_aging_strength(current_age, target_age),
+                    guidance_scale=7.5,
+                )
+                img = result if isinstance(result, Image.Image) else Image.open(io.BytesIO(result))
+            except Exception:
+                pass
+
+        # ── Try HF txt2img ──────────────────────────────────────────────────
+        if img is None and client:
+            try:
+                result = client.text_to_image(
+                    prompt=prompt,
+                    model="black-forest-labs/FLUX.1-schnell",
+                )
+                img = result if isinstance(result, Image.Image) else Image.open(io.BytesIO(result))
+            except Exception:
+                pass
+
+        # ── Styled placeholder with face compositing ────────────────────────
+        if img is None:
+            img = _styled_placeholder(ref_img, target_age, lifestyle, screen_time, eye_care)
+
+        results[label] = img.resize((512, 512), Image.LANCZOS)
+
+        if progress_bar:
+            progress_bar.progress((i + 1) / steps)
+
+    return results
+
+
+def _aging_strength(current_age: int, target_age: int) -> float:
+    """Map age delta to img2img strength (0.4–0.78)."""
+    delta = max(0, target_age - current_age)
+    return min(0.78, 0.40 + delta * 0.006)
+
+
+def _styled_placeholder(ref_img: Image.Image, target_age: int,
+                         lifestyle: str, screen_time: str, eye_care: str) -> Image.Image:
+    """
+    High-quality fallback: composites the reference face with aging overlays
+    when no AI API is available.
+    """
+    W = H = 512
+    # Background gradient per lifestyle
+    bg_colors = {
+        "Healthy":  [(15, 30, 25), (5, 15, 12)],
+        "Average":  [(20, 20, 35), (8, 8, 20)],
+        "Risky":    [(30, 15, 15), (15, 5, 5)],
+    }
+    c1, c2 = bg_colors.get(lifestyle, [(20, 20, 30), (8, 8, 15)])
+    canvas = Image.new("RGB", (W, H))
+    draw   = ImageDraw.Draw(canvas)
+    for y in range(H):
+        t = y / H
+        r = int(c1[0] + (c2[0] - c1[0]) * t)
+        g = int(c1[1] + (c2[1] - c1[1]) * t)
+        b = int(c1[2] + (c2[2] - c1[2]) * t)
+        draw.line([(0, y), (W, y)], fill=(r, g, b))
+
+    # Composite face (circular crop) with aging effects
+    face_sz = 320
+    face    = ref_img.resize((face_sz, face_sz), Image.LANCZOS)
+
+    # Aging simulation
+    age_factor = (target_age - 20) / 65.0
+    # Desaturate
+    face = ImageEnhance.Color(face).enhance(1.0 - age_factor * 0.55)
+    # Darken slightly
+    face = ImageEnhance.Brightness(face).enhance(1.0 - age_factor * 0.18)
+    # Slight contrast boost (skin texture)
+    face = ImageEnhance.Contrast(face).enhance(1.0 + age_factor * 0.2)
+
+    # Screen time → eye area darkening
+    if screen_time == "High":
+        eye_overlay = Image.new("RGBA", (face_sz, face_sz), (0, 0, 0, 0))
+        eye_draw    = ImageDraw.Draw(eye_overlay)
+        eye_draw.ellipse([face_sz // 4, face_sz // 3,
+                          3 * face_sz // 4, face_sz // 2 + 20],
+                         fill=(0, 0, 30, int(60 * age_factor)))
+        face = Image.alpha_composite(face.convert("RGBA"), eye_overlay).convert("RGB")
+
+    # Circular mask
+    mask = Image.new("L", (face_sz, face_sz), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, face_sz, face_sz], fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(6))
+
+    cx = (W - face_sz) // 2
+    cy = (H - face_sz) // 2 - 20
+    canvas.paste(face, (cx, cy), mask)
+
+    # Wrinkle arcs overlay
+    wrinkle_img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    wd          = ImageDraw.Draw(wrinkle_img)
+    n_wrinkles  = max(0, int((age_factor * 18)))
+    face_cx = cx + face_sz // 2
+    face_cy = cy + face_sz // 2
+    for i in range(n_wrinkles):
+        yy    = face_cy - 60 + i * 13
+        alpha = min(255, 40 + i * 10)
+        wd.arc([face_cx - 85 + i * 2, yy,
+                face_cx + 85 - i * 2, yy + 9],
+               start=0, end=180,
+               fill=(35, 25, 20, alpha), width=1)
+    canvas = Image.alpha_composite(canvas.convert("RGBA"), wrinkle_img).convert("RGB")
+
+    # Age label badge
+    draw = ImageDraw.Draw(canvas)
+    badge_color = {"Healthy": (34, 197, 94), "Average": (245, 158, 11), "Risky": (239, 68, 68)}[lifestyle]
+    draw.rounded_rectangle([cx, cy + face_sz + 14, cx + face_sz, cy + face_sz + 44],
+                            radius=8, fill=(*badge_color, 60))
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18)
+    except Exception:
+        font = ImageFont.load_default()
+    draw.text((W // 2, cy + face_sz + 29), f"Age {target_age} · {lifestyle}",
+              font=font, fill=badge_color, anchor="mm")
+
+    return canvas
+
+
+# ─── Awareness Report via Claude API ──────────────────────────────────────────
+
+def generate_awareness_report(current_age: int, gender: str, lifestyle: str,
+                               screen_time: str, eye_care: str) -> dict:
+    """
+    Calls Claude to generate a structured awareness report.
+    Returns {risk_level, risk_class, suggestions, summary}
+    """
+    prompt = f"""
+You are a preventive health advisor specialising in facial aging and digital eye health.
+
+User profile:
+- Current age: {current_age}
+- Gender: {gender}
+- Lifestyle: {lifestyle}
+- Daily screen time: {screen_time}
+- Consistent eye care habits: {eye_care}
+
+Respond ONLY with a valid JSON object (no markdown fences) with these exact keys:
+{{
+  "risk_level": "Low" | "Moderate" | "High",
+  "summary": "2-sentence summary of overall aging trajectory",
+  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+  "eye_health_note": "1-sentence specific note about eye health based on their habits"
+}}
+""".strip()
 
     try:
-        font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 52)
-        font_mid   = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 34)
-        font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
-    except Exception:
-        font_large = font_mid = font_small = ImageFont.load_default()
-
-    if wealth >= 10_000_000:
-        wealth_str = f"₹{wealth/10_000_000:.1f} Cr"
-    elif wealth >= 100_000:
-        wealth_str = f"₹{wealth/100_000:.1f} L"
-    else:
-        wealth_str = f"₹{wealth:,.0f}"
-
-    y_base = H - bar_h + 18
-    draw.text((40, y_base),        f"{name}, Age {age}",            font=font_large, fill=(255, 255, 255))
-    draw.text((40, y_base + 62),   f"Projected Wealth: {wealth_str}", font=font_mid,   fill=(200, 200, 200))
-    draw.text((40, y_base + 108),  f"● {lifestyle}",                 font=font_mid,   fill=color)
-    draw.text((W - 160, 24),       "KRED",                           font=font_large, fill=color)
-    draw.text((W - 230, 78),       "Future Self Engine",             font=font_small, fill=(180, 180, 180))
-
-
-def add_overlay_to_image(img: Image.Image, name: str, age: int,
-                          wealth: float, lifestyle: str) -> Image.Image:
-    W, H = img.size
-    draw = ImageDraw.Draw(img)
-    _draw_overlay(draw, name, age, wealth, lifestyle, W, H)
-    return img
-
-
-# ─── Main Pipeline ────────────────────────────────────────────────────────────
-
-def run_engine(name: str, current_age: int, monthly_income: float,
-               monthly_expenses: float, current_savings: float,
-               savings_rate: float = 0.02, improved: bool = False,
-               ref_image: Image.Image | None = None) -> dict:
-    """
-    Full pipeline:
-      1. Simulate finances
-      2. Classify lifestyle
-      3. Generate images (reference-conditioned → text-only → placeholder)
-      4. Save to output folder
-    Returns summary dict.
-    """
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    has_ref = ref_image is not None
-    print(f"\n{'='*60}")
-    print(f"  KRED Future Self Visualization Engine")
-    print(f"  User: {name} | Age: {current_age}")
-    print(f"  Mode: {'Improved Scenario' if improved else 'Current Trajectory'}")
-    print(f"  Reference Image: {'✓ Loaded' if has_ref else '✗ Not provided (using generic)'}")
-    print(f"{'='*60}\n")
-
-    if improved:
-        projections    = simulate_improved(current_age, monthly_income,
-                                           monthly_expenses, current_savings, savings_rate)
-        scenario_label = "improved"
-    else:
-        projections    = simulate_wealth(current_age, monthly_income,
-                                          monthly_expenses, current_savings, savings_rate)
-        scenario_label = "current"
-
-    summary = {
-        "user":         name,
-        "current_age":  current_age,
-        "scenario":     scenario_label,
-        "has_reference_image": has_ref,
-        "projections":  {},
-        "generated_at": datetime.now().isoformat(),
-    }
-
-    for age, data in projections.items():
-        real_wealth = data["real_wealth"]
-        lifestyle   = classify_lifestyle(real_wealth)
-        prompt      = build_prompt(name, age, lifestyle)
-
-        print(f"  Age {age} → {lifestyle}")
-        print(f"    Nominal Wealth : ₹{data['wealth']:>14,.0f}")
-        print(f"    Real Wealth    : ₹{real_wealth:>14,.0f}")
-        print(f"    Prompt         : {prompt[:80]}...")
-
-        img        = None
-        img_source = "placeholder"
-
-        # ── Step 1: Reference-conditioned generation ─────────────────────────
-        if ref_image is not None:
-            print(f"    Generating (reference-conditioned)...", end=" ", flush=True)
-            img = generate_image_with_reference(prompt, ref_image)
-            if img is not None:
-                img_source = "AI (img2img)"
-                print(f"  ✓ ({img_source})")
-
-        # ── Step 2: Text-only AI generation ──────────────────────────────────
-        if img is None:
-            if ref_image is not None:
-                print(f"    Falling back to text-only generation...")
-            else:
-                print(f"    Generating (text-to-image)...", end=" ", flush=True)
-            img = generate_image_hf(prompt)
-            if img is not None:
-                img_source = "AI (txt2img)"
-
-        # ── Step 3: Styled placeholder ────────────────────────────────────────
-        if img is None:
-            print(f"    Using styled placeholder...")
-            img        = generate_placeholder(name, age, lifestyle, real_wealth, ref_image)
-            img_source = "placeholder" + (" (with reference face)" if ref_image else "")
-
-        # Resize + overlay
-        img = img.resize((1024, 1024), Image.LANCZOS)
-        img = add_overlay_to_image(img, name, age, real_wealth, lifestyle)
-
-        filename = (
-            f"{name.lower()}_{scenario_label}_age{age}"
-            f"_{lifestyle.lower().replace(' ', '_')}.png"
+        resp = requests.post(
+            ANTHROPIC_API_URL,
+            headers={"Content-Type": "application/json"},
+            json={
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 400,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=20,
         )
-        filepath = OUTPUT_DIR / filename
-        img.save(filepath)
-        print(f"    Saved [{img_source}] → {filepath}\n")
-
-        summary["projections"][age] = {
-            "nominal_wealth": data["wealth"],
-            "real_wealth":    real_wealth,
-            "lifestyle":      lifestyle,
-            "image_path":     str(filepath),
-            "image_source":   img_source,
+        raw  = resp.json()["content"][0]["text"].strip()
+        raw  = raw.replace("```json", "").replace("```", "").strip()
+        data = json.loads(raw)
+        risk = data.get("risk_level", "Moderate")
+        data["risk_class"] = {"Low": "risk-low", "Moderate": "risk-moderate", "High": "risk-high"}.get(risk, "risk-moderate")
+        return data
+    except Exception as e:
+        # Graceful deterministic fallback
+        risk = _fallback_risk(lifestyle, screen_time, eye_care)
+        return {
+            "risk_level": risk,
+            "risk_class": {"Low": "risk-low", "Moderate": "risk-moderate", "High": "risk-high"}[risk],
+            "summary": "Based on your inputs, your aging trajectory has been estimated. Consistent healthy habits are the strongest predictor of graceful aging.",
+            "suggestions": [
+                "Adopt a consistent SPF 30+ sunscreen routine daily.",
+                "Limit recreational screen exposure to under 4 hours per day.",
+                "Schedule annual eye examinations and use blue-light filters.",
+            ],
+            "eye_health_note": "Your current screen habits may accelerate digital eye strain over time.",
         }
 
-    summary_path = OUTPUT_DIR / f"{name.lower()}_{scenario_label}_summary.json"
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, indent=2)
-    print(f"  Summary saved → {summary_path}")
 
-    return summary
-
-
-def print_financial_report(base: dict, improved: dict):
-    print(f"\n{'='*60}")
-    print(" FINANCIAL PROJECTION COMPARISON")
-    print(f"{'='*60}")
-    print(f" {'Age':<6} {'Current Trajectory':<28} {'Improved Scenario'}")
-    print(f" {'-'*56}")
-    ages = sorted(base["projections"].keys())
-    for age in ages:
-        b     = base["projections"][age]
-        i     = improved["projections"][age]
-        b_str = f"₹{b['real_wealth']/100000:.1f}L ({b['lifestyle']})"
-        i_str = f"₹{i['real_wealth']/100000:.1f}L ({i['lifestyle']})"
-        print(f" {age:<6} {b_str:<28} {i_str}")
-    print(f"{'='*60}\n")
+def _fallback_risk(lifestyle: str, screen_time: str, eye_care: str) -> str:
+    score = {"Healthy": 0, "Average": 1, "Risky": 2}[lifestyle]
+    score += {"Low": 0, "Medium": 1, "High": 2}[screen_time]
+    score += 0 if eye_care == "Yes" else 1
+    if score <= 1:   return "Low"
+    if score <= 3:   return "Moderate"
+    return "High"
 
 
-# ─── CLI ──────────────────────────────────────────────────────────────────────
+# ─── Image Comparison Slider (HTML) ───────────────────────────────────────────
+
+def render_comparison_slider(img_before: Image.Image, img_after: Image.Image,
+                              label_before: str = "Now", label_after: str = "Future") -> None:
+    b64_before = pil_to_b64(img_before.resize((480, 480)))
+    b64_after  = pil_to_b64(img_after.resize((480, 480)))
+
+    html = f"""
+<div style="position:relative;width:480px;margin:0 auto;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
+  <img id="imgAfter" src="data:image/png;base64,{b64_after}"
+       style="display:block;width:480px;height:480px;object-fit:cover;" />
+  <div id="clipBefore" style="position:absolute;top:0;left:0;width:50%;height:100%;overflow:hidden;">
+    <img src="data:image/png;base64,{b64_before}"
+         style="display:block;width:480px;height:480px;object-fit:cover;" />
+  </div>
+  <div id="handle" style="position:absolute;top:0;left:50%;width:3px;height:100%;
+       background:linear-gradient(180deg,#b87fff,#00c8b0);cursor:ew-resize;z-index:10;">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+         width:32px;height:32px;border-radius:50%;background:#1a0a2e;
+         border:2px solid #b87fff;display:flex;align-items:center;justify-content:center;
+         color:#b87fff;font-size:14px;">⇔</div>
+  </div>
+  <span style="position:absolute;bottom:12px;left:14px;background:rgba(0,0,0,.65);
+        color:#b87fff;font-size:12px;padding:3px 10px;border-radius:99px;
+        font-family:monospace;">{label_before}</span>
+  <span style="position:absolute;bottom:12px;right:14px;background:rgba(0,0,0,.65);
+        color:#00c8b0;font-size:12px;padding:3px 10px;border-radius:99px;
+        font-family:monospace;">{label_after}</span>
+</div>
+<script>
+(function(){{
+  var handle    = document.getElementById('handle');
+  var clipDiv   = document.getElementById('clipBefore');
+  var container = handle.parentElement;
+  var dragging  = false;
+  handle.addEventListener('mousedown',  function(e){{ dragging=true; e.preventDefault(); }});
+  handle.addEventListener('touchstart', function(e){{ dragging=true; }}, {{passive:true}});
+  document.addEventListener('mouseup',  function(){{ dragging=false; }});
+  document.addEventListener('touchend', function(){{ dragging=false; }});
+  document.addEventListener('mousemove', function(e){{
+    if(!dragging) return;
+    var rect = container.getBoundingClientRect();
+    var pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    handle.style.left = (pct*100)+'%';
+    clipDiv.style.width = (pct*100)+'%';
+  }});
+  document.addEventListener('touchmove', function(e){{
+    if(!dragging) return;
+    var rect = container.getBoundingClientRect();
+    var pct  = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
+    handle.style.left = (pct*100)+'%';
+    clipDiv.style.width = (pct*100)+'%';
+  }}, {{passive:true}});
+}})();
+</script>
+"""
+    st.components.v1.html(html, height=500)
+
+
+# ─── Main App ──────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="KRED Future Self Visualization Engine",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
-    )
-    parser.add_argument("--name",      default="Prannav", help="User's name")
-    parser.add_argument("--age",       type=int,   default=20,   help="Current age")
-    parser.add_argument("--income",    type=float, default=2000, help="Monthly income (₹)")
-    parser.add_argument("--expenses",  type=float, default=1000, help="Monthly expenses (₹)")
-    parser.add_argument("--savings",   type=float, default=0,    help="Current savings (₹)")
-    parser.add_argument("--rate",      type=float, default=0.02, help="Savings rate (0.02 = 2%%)")
-    parser.add_argument("--ref-image", default=None,
-                        help="Path to reference photo of the user (e.g. dummy.jpeg). "
-                             "Used to condition AI generation on the user's actual face.")
-    parser.add_argument("--no-improved", action="store_true", help="Skip improved scenario")
-    args = parser.parse_args()
+    # ── Header ──────────────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="kred-header">
+      <div class="kred-title">KRED · Future Self Engine</div>
+      <div class="kred-sub">AI-powered facial age progression &amp; wellness awareness platform</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Load reference image once; reuse across both scenarios
-    ref_image = load_reference_image(args.ref_image)
+    # ── Sidebar inputs ───────────────────────────────────────────────────────
+    with st.sidebar:
+        st.markdown('<div class="sidebar-title">⚙ YOUR PROFILE</div>', unsafe_allow_html=True)
 
-    base_summary = run_engine(
-        name=args.name,
-        current_age=args.age,
-        monthly_income=args.income,
-        monthly_expenses=args.expenses,
-        current_savings=args.savings,
-        savings_rate=args.rate,
-        improved=False,
-        ref_image=ref_image,
-    )
-
-    if not args.no_improved:
-        improved_summary = run_engine(
-            name=args.name,
-            current_age=args.age,
-            monthly_income=args.income,
-            monthly_expenses=args.expenses,
-            current_savings=args.savings,
-            savings_rate=args.rate,
-            improved=True,
-            ref_image=ref_image,
+        uploaded = st.file_uploader(
+            "📸 Upload your face photo",
+            type=["jpg", "jpeg", "png", "webp"],
+            help="Clear, front-facing photo gives the best results.",
         )
-        print_financial_report(base_summary, improved_summary)
 
-    print(f"   All images saved to: {OUTPUT_DIR.resolve()}")
-    print(f"  Open the folder to view your future self visualizations.\n")
+        st.markdown("---")
+        current_age  = st.number_input("Current Age", min_value=10, max_value=70, value=20, step=1)
+        gender       = st.selectbox("Gender", ["Male", "Female", "Prefer not to say"])
+        lifestyle    = st.selectbox("Lifestyle", ["Healthy", "Average", "Risky"],
+                                    help="Healthy = regular exercise, balanced diet; Risky = smoking, poor diet, etc.")
+        screen_time  = st.selectbox("Daily Screen Time", ["Low", "Medium", "High"],
+                                    help="Low < 3 h · Medium 3–6 h · High > 6 h")
+        eye_care     = st.selectbox("Consistent Eye Care Habits", ["Yes", "No"],
+                                    help="Regular check-ups, blue-light glasses, eye drops, etc.")
+
+        st.markdown("---")
+        run_btn = st.button("🔮  Generate My Future Self", use_container_width=True)
+
+    # ── Main panel ──────────────────────────────────────────────────────────
+    if not uploaded:
+        # Welcome state
+        st.markdown("""
+        <div class="card" style="text-align:center;padding:3rem 2rem;">
+          <div style="font-size:3.5rem;margin-bottom:1rem;">🪞</div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:.6rem;">
+            See your future self
+          </div>
+          <div style="color:rgba(220,215,240,.55);max-width:420px;margin:0 auto;line-height:1.7;">
+            Upload a face photo and fill in your health profile on the left.
+            The engine will project how your face may look at 40, 60 and 80 —
+            shaped by the habits you build today.
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    # Load & preprocess reference image
+    ref_pil = preprocess_image(Image.open(uploaded))
+
+    col_preview, col_info = st.columns([1, 2])
+    with col_preview:
+        st.markdown('<div class="age-card">', unsafe_allow_html=True)
+        st.markdown('<div class="age-label">YOUR PHOTO</div>', unsafe_allow_html=True)
+        st.image(ref_pil, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_info:
+        st.markdown(f"""
+        <div class="card">
+          <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.8rem;">
+            Projection Parameters
+          </div>
+          <table style="width:100%;font-size:.9rem;border-collapse:collapse;">
+            <tr><td style="padding:.3rem 0;color:rgba(220,215,240,.55);">Age</td>
+                <td style="font-weight:500;">{current_age}</td></tr>
+            <tr><td style="padding:.3rem 0;color:rgba(220,215,240,.55);">Gender</td>
+                <td style="font-weight:500;">{gender}</td></tr>
+            <tr><td style="padding:.3rem 0;color:rgba(220,215,240,.55);">Lifestyle</td>
+                <td style="font-weight:500;">{lifestyle}</td></tr>
+            <tr><td style="padding:.3rem 0;color:rgba(220,215,240,.55);">Screen time</td>
+                <td style="font-weight:500;">{screen_time}</td></tr>
+            <tr><td style="padding:.3rem 0;color:rgba(220,215,240,.55);">Eye care</td>
+                <td style="font-weight:500;">{eye_care}</td></tr>
+          </table>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if not run_btn:
+        return
+
+    # ── Generation ──────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:.8rem;">Generating your future projections…</div>', unsafe_allow_html=True)
+
+    pbar   = st.progress(0)
+    status = st.empty()
+
+    with st.spinner(""):
+        status.markdown("_Initialising age progression pipeline…_")
+        images = generate_aged_images(
+            ref_img=ref_pil,
+            current_age=current_age,
+            gender=gender,
+            lifestyle=lifestyle,
+            screen_time=screen_time,
+            eye_care=eye_care,
+            progress_bar=pbar,
+        )
+
+    pbar.progress(1.0)
+    status.empty()
+
+    # Save outputs
+    username  = uploaded.name.rsplit(".", 1)[0][:20]
+    saved_paths = save_outputs(images, username=username)
+
+    # ── Display aged images ──────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;">📸 Age Projections</div>', unsafe_allow_html=True)
+
+    labels = {
+        "original": ("Current", "#b87fff"),
+        "aged_40":  ("Age 40",  "#00c8b0"),
+        "aged_60":  ("Age 60",  "#f59e0b"),
+        "aged_80":  ("Age 80",  "#ef4444"),
+    }
+
+    cols = st.columns(4)
+    for i, (key, (label, color)) in enumerate(labels.items()):
+        img = images.get(key)
+        if img is None:
+            continue
+        with cols[i]:
+            st.markdown(f'<div class="age-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="age-label" style="color:{color};">{label}</div>', unsafe_allow_html=True)
+            st.image(img, use_container_width=True)
+
+            # Download button
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            st.download_button(
+                label="⬇ Download",
+                data=buf.getvalue(),
+                file_name=f"{username}_{key}.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Comparison slider ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:1rem;">🔍 Before / After Comparison</div>', unsafe_allow_html=True)
+
+    compare_with = st.radio("Compare current photo with:", ["Age 40", "Age 60", "Age 80"], horizontal=True)
+    key_map = {"Age 40": "aged_40", "Age 60": "aged_60", "Age 80": "aged_80"}
+    render_comparison_slider(
+        images["original"],
+        images[key_map[compare_with]],
+        label_before="Now",
+        label_after=compare_with,
+    )
+
+    # ── Warning banner ───────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="warning-banner">
+      ⚠️  <strong>Your future vision health depends on your current habits.</strong>
+      The projections above are illustrative — but the underlying science is real.
+      Lifestyle, screen exposure and eye care choices made today compound over decades.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── AI Awareness Report ──────────────────────────────────────────────────
+    with st.expander("🔬  See Future Insights & Personalised Recommendations", expanded=True):
+        with st.spinner("Generating your personalised health insight…"):
+            report = generate_awareness_report(current_age, gender, lifestyle, screen_time, eye_care)
+
+        risk_label = report.get("risk_level", "Moderate")
+        risk_class = report.get("risk_class",  "risk-moderate")
+
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            st.markdown(f"""
+            <div style="text-align:center;padding:1.5rem;">
+              <div style="font-family:'Syne',sans-serif;font-size:.75rem;letter-spacing:.15em;
+                   text-transform:uppercase;color:rgba(220,215,240,.5);margin-bottom:.5rem;">
+                AGING RISK LEVEL
+              </div>
+              <span class="{risk_class}" style="font-size:1.1rem;">{risk_label}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with c2:
+            st.markdown(f"""
+            <div class="insight-box">
+              <h4>📋 Summary</h4>
+              {report.get('summary','')}
+            </div>
+            """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="insight-box">
+              <h4>👁 Eye Health Note</h4>
+              {report.get('eye_health_note','')}
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown('<div style="font-family:\'Syne\',sans-serif;font-size:.9rem;font-weight:700;margin:.8rem 0 .4rem;letter-spacing:.06em;color:#b87fff;">ACTIONABLE SUGGESTIONS</div>', unsafe_allow_html=True)
+        for sug in report.get("suggestions", []):
+            st.markdown(f"""
+            <div style="display:flex;gap:.7rem;align-items:flex-start;
+                 background:rgba(0,200,176,0.06);border:1px solid rgba(0,200,176,0.2);
+                 border-radius:10px;padding:.8rem 1rem;margin:.4rem 0;font-size:.92rem;line-height:1.6;">
+              <span style="color:#00c8b0;font-size:1rem;flex-shrink:0;">✦</span>
+              <span>{sug}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ── Output paths ─────────────────────────────────────────────────────────
+    if saved_paths:
+        with st.expander("📁 Saved Output Paths"):
+            for key, path in saved_paths.items():
+                st.code(path, language="bash")
 
 
 if __name__ == "__main__":

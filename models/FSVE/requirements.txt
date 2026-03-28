@@ -1,6 +1,14 @@
-huggingface-hub
-Pillow
-numpy
-requests
-python-dotenv
-fal-client
+streamlit>=1.35.0
+pillow>=10.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+numpy>=1.24.0
+ 
+# LLM stack
+langchain>=0.2.0
+langchain-groq>=0.1.6
+langchain-core>=0.2.0
+ 
+# Optional: HuggingFace image generation
+huggingface-hub>=0.22.0
+ 
