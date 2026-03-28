@@ -19,7 +19,7 @@ export default function Pricing() {
           <div className="card">
             <div className="text-text-secondary text-sm font-medium mb-2">Starter</div>
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-bold text-text-primary">$0</span>
+              <span className="text-4xl font-bold text-text-primary">₹0</span>
               <span className="text-text-muted">/month</span>
             </div>
             <ul className="space-y-3 mb-8">
@@ -41,7 +41,7 @@ export default function Pricing() {
             </div>
             <div className="text-text-secondary text-sm font-medium mb-2">Pro</div>
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-bold text-text-primary">$12</span>
+              <span className="text-4xl font-bold text-text-primary">₹12</span>
               <span className="text-text-muted">/month</span>
             </div>
             <ul className="space-y-3 mb-8">
@@ -60,7 +60,7 @@ export default function Pricing() {
           <div className="card">
             <div className="text-text-secondary text-sm font-medium mb-2">Enterprise</div>
             <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-4xl font-bold text-text-primary">$49</span>
+              <span className="text-4xl font-bold text-text-primary">₹49</span>
               <span className="text-text-muted">/month</span>
             </div>
             <ul className="space-y-3 mb-8">

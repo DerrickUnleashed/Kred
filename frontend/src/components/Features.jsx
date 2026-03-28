@@ -98,10 +98,10 @@ export default function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className={`card cursor-pointer group ${activeFeature === index ? 'border-blue-500/50' : ''}`}
+              className={`card cursor-pointer group ₹{activeFeature === index ? 'border-blue-500/50' : ''}`}
               onMouseEnter={() => setActiveFeature(index)}
               onMouseLeave={() => setActiveFeature(null)}
-              style={{ animationDelay: `${index * 50}ms` }}
+              style={{ animationDelay: `₹{index * 50}ms` }}
             >
               <div className="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-5 group-hover:bg-blue-500/20 transition-colors duration-300">
                 <div className="text-blue-500">{feature.icon}</div>

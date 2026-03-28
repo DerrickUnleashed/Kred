@@ -1,8 +1,10 @@
+import { Link } from 'react-router-dom';
+
 export default function Hero() {
   const stats = [
     { value: '2.5M+', label: 'Users Protected' },
     { value: '94%', label: 'Spending Reduction' },
-    { value: '$12K', label: 'Avg. Savings/Year' },
+    { value: '₹12K', label: 'Avg. Savings/Year' },
     { value: '4.9★', label: 'User Rating' }
   ];
 
@@ -31,12 +33,14 @@ export default function Hero() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link to="/login">
               <button className="btn-primary animate-pulse-glow">
                 Start Free Trial
                 <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
               </button>
+              </Link>
               <button className="btn-secondary">
                 Watch Demo
               </button>
@@ -44,7 +48,7 @@ export default function Hero() {
             
             <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
-                <div key={index} className="animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+                <div key={index} className="animate-slide-up" style={{ animationDelay: `₹{index * 100}ms` }}>
                   <div className="text-2xl sm:text-3xl font-bold text-blue-500">{stat.value}</div>
                   <div className="text-sm text-text-muted">{stat.label}</div>
                 </div>
@@ -52,44 +56,42 @@ export default function Hero() {
             </div>
           </div>
           
-          <div className="relative animate-fade-in animate-delay-300">
-            <div className="relative w-full aspect-square max-w-lg mx-auto">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute inset-8 bg-surface/80 backdrop-blur-xl border border-secondary rounded-3xl p-8 animate-float">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
+          <div className="relative animate-fade-in animate-delay-300 h-[500px] lg:h-[500px] w-[400px] lg:w-[500px] mx-auto">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full blur-3xl"></div>
+            <div className="relative h-full bg-surface/80 backdrop-blur-xl border border-secondary rounded-3xl p-6 lg:p-8 animate-float overflow-hidden">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                  <svg className="w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-text-primary font-semibold">Kred Bird</div>
+                  <div className="text-text-muted text-sm">Your AI Companion</div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-text-secondary text-sm mb-2">Today's Spending</div>
+                  <div className="text-3xl font-bold text-blue-500">₹516.47</div>
+                  <div className="text-text-muted text-sm mt-1">Under limit by ₹100.53</div>
+                </div>
+                
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-text-secondary text-sm mb-2">Weekly Progress</div>
+                  <div className="w-full h-2 bg-surface rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style={{ width: '72%' }}></div>
                   </div>
-                  <div>
-                    <div className="text-text-primary font-semibold">Kred Bird</div>
-                    <div className="text-text-muted text-sm">Your AI Companion</div>
+                  <div className="flex justify-between text-xs text-text-muted mt-2">
+                    <span>₹1700 spent</span>
+                    <span>₹2000 budget</span>
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <div className="text-text-secondary text-sm mb-2">Today's Spending</div>
-                    <div className="text-3xl font-bold text-blue-500">$47.82</div>
-                    <div className="text-text-muted text-sm mt-1">Under limit by $52.18</div>
-                  </div>
-                  
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <div className="text-text-secondary text-sm mb-2">Weekly Progress</div>
-                    <div className="w-full h-2 bg-surface rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" style={{ width: '72%' }}></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-text-muted mt-2">
-                      <span>$342 spent</span>
-                      <span>$475 budget</span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-secondary/50 rounded-xl p-4">
-                    <div className="text-text-secondary text-sm mb-3">AI Insight</div>
-                    <p className="text-sm text-text-primary">You're 15% under budget this week. Consider allocating the savings toward your vacation fund.</p>
-                  </div>
+                <div className="bg-secondary/50 rounded-xl p-4">
+                  <div className="text-text-secondary text-sm mb-3">AI Insight</div>
+                  <p className="text-sm text-text-primary">You're 15% under budget this week. Consider allocating the savings toward your vacation fund.</p>
                 </div>
               </div>
             </div>
