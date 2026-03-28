@@ -39,6 +39,7 @@ export default function Dashboard() {
   
   // Income state
   const [monthlyIncome, setMonthlyIncome] = useState('');
+  const [expectedSavings, setExpectedSavings] = useState('');
   const [incomeLoading, setIncomeLoading] = useState(false);
   
   // Products state
@@ -90,7 +91,8 @@ export default function Dashboard() {
       .single();
     
     if (data) {
-      setMonthlyIncome(data.monthly_income || 0);
+      setMonthlyIncome(data.monthly_income || '');
+      setExpectedSavings(data.expected_savings || '');
     }
   };
 
@@ -120,12 +122,19 @@ export default function Dashboard() {
     if (existing) {
       await supabase
         .from('user_income')
-        .update({ monthly_income: monthlyIncome })
+        .update({ 
+          monthly_income: monthlyIncome,
+          expected_savings: expectedSavings,
+        })
         .eq('user_id', user?.id);
     } else {
       await supabase
         .from('user_income')
-        .insert([{ user_id: user?.id, monthly_income: monthlyIncome }]);
+        .insert([{ 
+          user_id: user?.id, 
+          monthly_income: monthlyIncome,
+          expected_savings: expectedSavings,
+        }]);
     }
     
     setIncomeLoading(false);
@@ -187,7 +196,9 @@ export default function Dashboard() {
   };
 
   const totalExpenses = products.reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const expectedExpenses = (parseFloat(monthlyIncome) || 0) - (parseFloat(expectedSavings) || 0);
   const remaining = (parseFloat(monthlyIncome) || 0) - totalExpenses;
+  const savingsDifference = (parseFloat(expectedSavings) || 0) - ((parseFloat(monthlyIncome) || 0) - totalExpenses);
 
   const categoryData = CATEGORIES.map(cat => ({
     name: cat,
@@ -201,9 +212,9 @@ export default function Dashboard() {
   }));
 
   const monthlyData = [
-    { month: 'Jan', income: parseFloat(monthlyIncome) || 0, expenses: totalExpenses },
-    { month: 'Feb', income: parseFloat(monthlyIncome) || 0, expenses: 0 },
-    { month: 'Mar', income: parseFloat(monthlyIncome) || 0, expenses: 0 },
+    { month: 'Jan', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: totalExpenses },
+    { month: 'Feb', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: 0 },
+    { month: 'Mar', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: 0 },
   ];
 
   if (loading) {
@@ -261,19 +272,23 @@ export default function Dashboard() {
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Monthly Income</p>
-                <p className="text-2xl font-bold text-blue-500">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-blue-500">${parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <p className="text-text-secondary text-sm mb-1">Total Expenses</p>
-                <p className="text-2xl font-bold text-red-400">₹{totalExpenses.toLocaleString()}</p>
+                <p className="text-text-secondary text-sm mb-1">Expected Savings</p>
+                <p className="text-2xl font-bold text-green-400">${parseFloat(expectedSavings).toLocaleString() || '0'}</p>
+              </div>
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <p className="text-text-secondary text-sm mb-1">Expected Expense</p>
+                <p className="text-2xl font-bold text-yellow-400">${expectedExpenses.toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Remaining</p>
-                <p className={`text-2xl font-bold ₹{remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ₹{remaining.toLocaleString()}
+                <p className={`text-2xl font-bold ${remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ${remaining.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -356,8 +371,9 @@ export default function Dashboard() {
                         color: '#F8FAFC'
                       }}
                     />
-                    <Line type="monotone" dataKey="income" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                    <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                    <Line type="monotone" dataKey="income" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} name="Income" />
+                    <Line type="monotone" dataKey="expected" stroke="#F59E0B" strokeWidth={2} strokeDasharray="5 5" dot={{ fill: '#F59E0B' }} name="Expected Expense" />
+                    <Line type="monotone" dataKey="actual" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} name="Actual Expense" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -366,16 +382,38 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'income' && (
-          <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6 max-w-xl">
-            <h2 className="text-xl font-semibold text-text-primary mb-6">Monthly Income</h2>
-            <div className="flex gap-4">
-              <input
-                type="number"
-                value={monthlyIncome}
-                onChange={(e) => setMonthlyIncome(e.target.value)}
-                placeholder="Enter your monthly income"
-                className="flex-1 px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
-              />
+          <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6 max-w-2xl">
+            <h2 className="text-xl font-semibold text-text-primary mb-6">Monthly Income & Savings</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-text-secondary mb-2">Monthly Income ($)</label>
+                  <input
+                    type="number"
+                    value={monthlyIncome}
+                    onChange={(e) => setMonthlyIncome(e.target.value)}
+                    placeholder="Enter your monthly income"
+                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-text-secondary mb-2">Expected Savings ($)</label>
+                  <input
+                    type="number"
+                    value={expectedSavings}
+                    onChange={(e) => setExpectedSavings(e.target.value)}
+                    placeholder="How much you want to save"
+                    className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              </div>
+              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                <p className="text-text-secondary text-sm">
+                  <span className="text-blue-500 font-medium">Expected Expense:</span> 
+                  <span className="text-text-primary font-semibold ml-2">${expectedExpenses.toLocaleString()}</span>
+                  <span className="text-text-muted text-xs ml-2">(Income - Savings)</span>
+                </p>
+              </div>
               <button
                 onClick={saveIncome}
                 disabled={incomeLoading}
@@ -431,7 +469,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit (₹)</label>
+                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit ($)</label>
                     <input
                       type="number"
                       value={productForm.cost_per_unit}
@@ -492,8 +530,8 @@ export default function Dashboard() {
                           <td className="py-3 px-4 text-text-primary">{product.name}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.category}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.quantity}</td>
-                          <td className="py-3 px-4 text-text-secondary">₹{product.cost_per_unit}</td>
-                          <td className="py-3 px-4 text-blue-500 font-medium">₹{product.total_cost}</td>
+                          <td className="py-3 px-4 text-text-secondary">${product.cost_per_unit}</td>
+                          <td className="py-3 px-4 text-blue-500 font-medium">${product.total_cost}</td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
                               <button
