@@ -1,442 +1,380 @@
 """
-============================================================
-  INDIAN MARKET ANALYZER — Complete Stock Analysis Engine
-  Replica of Yahoo Finance with India-focused features
-============================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          KRED AI ANALYTICS — Intelligent Market Insights                    ║
+║          LLM-powered analysis, chatbot, and market intelligence            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+This module provides AI-powered market analytics including:
+- Market insights generation using Groq LLM
+- Stock-specific technical analysis with simple explanations
+- Interactive chatbot for user queries
+- Beginner-friendly explanations with analogies
 """
 
-import yfinance as yf
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import warnings
-from datetime import datetime, timedelta
-import requests
-from bs4 import BeautifulSoup
-import time
+import os
+from typing import Dict, List, Any
+from datetime import datetime
 
-warnings.filterwarnings("ignore")
+# LLM Libraries
+try:
+    from langchain_groq import ChatGroq
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    print("⚠️ langchain-groq not installed. Run: pip install langchain-groq")
 
-class IndianMarketAnalyzer:
-    """Complete Indian stock market analysis engine."""
+
+class KredAIAnalytics:
+    """
+    AI-powered market analytics engine using Groq LLM.
+    Provides beginner-friendly explanations with analogies.
+    """
     
-    # Indian Market Indices
-    INDICES = {
-        'NIFTY 50': '^NSEI',
-        'BSE SENSEX': '^BSESN',
-        'NIFTY BANK': '^NSEBANK',
-        'NIFTY IT': '^CNXIT',
-        'NIFTY PHARMA': '^CNXPHARMA',
-        'NIFTY FMCG': '^CNXFMCG',
-        'NIFTY AUTO': '^CNXAUTO',
-        'NIFTY METAL': '^CNXMETAL'
-    }
+    # System prompt for all AI interactions
+    SYSTEM_PROMPT = """You are KRED AI, a friendly Indian stock market expert who explains finance 
+in super simple language that even a complete beginner can understand.
+
+CORE RULES:
+1. Always use simple analogies — compare market trends to WEATHER (sunny/stormy),
+   RSI to a CAR SPEEDOMETER (going too fast = overbought), volatility to ROAD CONDITIONS 
+   (bumpy road = high risk), MACD to a TRAIN (momentum/direction).
+2. Use ₹ for prices. Reference Indian context (NSE, BSE, SEBI, FD rates, SIP).
+3. Never recommend "buy/sell" — say "worth watching", "looks interesting", "be cautious".
+4. Tailor advice to the user's risk profile: conservative (FD mindset), moderate, aggressive.
+5. End every market insight with one actionable suggestion.
+6. Keep responses under 250 words unless asked for detail.
+7. Use emojis sparingly to highlight key points. 📊 💡 ⚠️
+
+Risk profiles:
+- Conservative: prioritise capital safety, dividends, blue chips
+- Moderate: balanced growth + safety, diversified sectors  
+- Aggressive: growth stocks, momentum plays, higher tolerance for dips
+"""
     
-    # Sector-wise top stocks
-    SECTOR_STOCKS = {
-        'Banking': ['HDFCBANK.NS', 'ICICIBANK.NS', 'SBIN.NS', 'KOTAKBANK.NS', 'AXISBANK.NS'],
-        'IT': ['TCS.NS', 'INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS'],
-        'Pharma': ['SUNPHARMA.NS', 'DRREDDY.NS', 'CIPLA.NS', 'DIVISLAB.NS', 'BIOCON.NS'],
-        'FMCG': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS'],
-        'Auto': ['MARUTI.NS', 'M&M.NS', 'TATAMOTORS.NS', 'BAJAJ-AUTO.NS', 'HEROMOTOCO.NS'],
-        'Energy': ['RELIANCE.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS', 'TATAPOWER.NS'],
-        'Metal': ['TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'VEDL.NS', 'NATIONALUM.NS'],
-        'Infra': ['LT.NS', 'ADANIPORTS.NS', 'SIEMENS.NS', 'ABB.NS', 'L&T.NS']
-    }
-    
-    def __init__(self):
-        self.cache = {}
-        self.last_update = None
+    def __init__(self, api_key: str = None):
+        """
+        Initialize the AI analytics engine.
         
-    def fetch_live_data(self, symbol):
-        """Fetch live data for any symbol."""
-        try:
-            stock = yf.Ticker(symbol)
-            data = stock.history(period="1d", interval="1m")
-            if not data.empty:
-                latest = data.iloc[-1]
-                return {
-                    'price': round(latest['Close'], 2),
-                    'open': round(latest['Open'], 2),
-                    'high': round(latest['High'], 2),
-                    'low': round(latest['Low'], 2),
-                    'volume': int(latest['Volume']),
-                    'timestamp': datetime.now()
-                }
-            return None
-        except:
-            return None
+        Args:
+            api_key: Groq API key (optional, will use GROQ_API_KEY env var if not provided)
+        """
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.llm = None
+        self.market_context = {}
+        self.conversation_history = []
+        
+        if self.api_key and self.api_key.startswith("gsk_") and LLM_AVAILABLE:
+            try:
+                self.llm = ChatGroq(
+                    groq_api_key=self.api_key,
+                    model_name="llama3-70b-8192",
+                    temperature=0.4,
+                    max_tokens=1200,
+                )
+            except Exception as e:
+                print(f"Failed to initialize LLM: {e}")
     
-    def fetch_historical_data(self, symbol, period="1mo"):
-        """Fetch historical OHLCV data."""
-        try:
-            stock = yf.Ticker(symbol)
-            df = stock.history(period=period)
-            df.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits']
-            df.index = pd.to_datetime(df.index)
-            return df
-        except:
-            return pd.DataFrame()
+    def is_available(self) -> bool:
+        """Check if AI engine is properly configured."""
+        return self.llm is not None and LLM_AVAILABLE
     
-    def get_company_info(self, symbol):
-        """Get detailed company information."""
-        try:
-            stock = yf.Ticker(symbol)
-            info = stock.info
-            return {
-                'name': info.get('longName', 'N/A'),
-                'sector': info.get('sector', 'N/A'),
-                'industry': info.get('industry', 'N/A'),
-                'market_cap': info.get('marketCap', 'N/A'),
-                'pe_ratio': info.get('trailingPE', 'N/A'),
-                'eps': info.get('trailingEps', 'N/A'),
-                'dividend_yield': info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0,
-                '52_week_high': info.get('fiftyTwoWeekHigh', 'N/A'),
-                '52_week_low': info.get('fiftyTwoWeekLow', 'N/A'),
-                'avg_volume': info.get('averageVolume', 'N/A'),
-                'beta': info.get('beta', 'N/A')
-            }
-        except:
-            return {}
+    def update_market_context(self, context: Dict):
+        """
+        Update the market context for AI analysis.
+        
+        Args:
+            context: Dictionary containing market data (indices, sectors, movers, etc.)
+        """
+        self.market_context = context
     
-    def calculate_indicators(self, df):
-        """Calculate all technical indicators."""
-        if df.empty:
-            return df
+    def _format_market_data(self) -> str:
+        """Format market data for inclusion in prompts."""
+        if not self.market_context:
+            return "Market data not available."
+        
+        formatted = []
+        
+        # Indices
+        indices = self.market_context.get('indices', {})
+        if indices:
+            formatted.append("INDICES: " + "; ".join(
+                f"{k}: {v['value']} ({v['pct']:+.2f}%)" 
+                for k, v in indices.items()
+            ))
+        
+        # Sectors
+        sectors = self.market_context.get('sectors', {})
+        if sectors:
+            formatted.append("SECTORS: " + "; ".join(
+                f"{k}: {v:+.2f}%" for k, v in sectors.items()
+            ))
+        
+        # Gainers
+        gainers = self.market_context.get('gainers', [])
+        if gainers:
+            formatted.append("TOP GAINERS: " + "; ".join(
+                f"{g['symbol']}: +{g['change']}%" for g in gainers[:3]
+            ))
+        
+        # Losers
+        losers = self.market_context.get('losers', [])
+        if losers:
+            formatted.append("TOP LOSERS: " + "; ".join(
+                f"{l['symbol']}: {l['change']}%" for l in losers[:3]
+            ))
+        
+        # Summary
+        summary = self.market_context.get('summary', {})
+        if summary:
+            formatted.append(f"MARKET SENTIMENT: {summary.get('market_sentiment', 'Neutral')}")
+            formatted.append(f"AVERAGE CHANGE: {summary.get('avg_change', 0):+.2f}%")
+        
+        return "\n".join(formatted) if formatted else "Market data available."
+    
+    def generate_market_insight(self, risk_profile: str = "Moderate") -> str:
+        """
+        Generate comprehensive market insight based on current data.
+        
+        Args:
+            risk_profile: User's risk appetite (Conservative/Moderate/Aggressive)
+        
+        Returns:
+            AI-generated market analysis
+        """
+        if not self.is_available():
+            return self._mock_market_insight(risk_profile)
+        
+        try:
+            market_data = self._format_market_data()
+            prompt = (
+                f"User's risk profile: {risk_profile}\n\n"
+                f"Current market snapshot:\n{market_data}\n\n"
+                "Give a clear, beginner-friendly market overview using simple analogies. "
+                "Highlight 2-3 sectors worth watching and end with one actionable tip."
+            )
             
-        df = df.copy()
-        
-        # Moving Averages
-        df['SMA_20'] = df['Close'].rolling(20).mean()
-        df['SMA_50'] = df['Close'].rolling(50).mean()
-        df['SMA_200'] = df['Close'].rolling(200).mean()
-        df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-        df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
-        
-        # MACD
-        df['MACD'] = df['EMA_12'] - df['EMA_26']
-        df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-        df['MACD_Histogram'] = df['MACD'] - df['MACD_Signal']
-        
-        # RSI
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
-        
-        # Bollinger Bands
-        df['BB_Middle'] = df['Close'].rolling(20).mean()
-        bb_std = df['Close'].rolling(20).std()
-        df['BB_Upper'] = df['BB_Middle'] + (bb_std * 2)
-        df['BB_Lower'] = df['BB_Middle'] - (bb_std * 2)
-        
-        # Volatility
-        df['Daily_Return'] = df['Close'].pct_change()
-        df['Volatility'] = df['Daily_Return'].rolling(20).std() * np.sqrt(252) * 100
-        
-        # Volume Indicators
-        df['Volume_SMA'] = df['Volume'].rolling(20).mean()
-        df['Volume_Ratio'] = df['Volume'] / df['Volume_SMA']
-        
-        # ATR
-        high_low = df['High'] - df['Low']
-        high_close = abs(df['High'] - df['Close'].shift())
-        low_close = abs(df['Low'] - df['Close'].shift())
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = np.max(ranges, axis=1)
-        df['ATR'] = true_range.rolling(14).mean()
-        
-        return df
+            response = self.llm.invoke([
+                SystemMessage(content=self.SYSTEM_PROMPT),
+                HumanMessage(content=prompt)
+            ])
+            return response.content
+        except Exception as e:
+            return f"❌ AI error: {e}\n\n{self._mock_market_insight(risk_profile)}"
     
-    def get_top_gainers(self):
-        """Get top gainers from NIFTY 50."""
-        gainers = []
-        tickers = self.SECTOR_STOCKS['Banking'][:5] + self.SECTOR_STOCKS['IT'][:5] + self.SECTOR_STOCKS['FMCG'][:5]
+    def analyze_stock(self, symbol: str, technical: Dict, fundamental: Dict, 
+                      risk_profile: str = "Moderate") -> str:
+        """
+        Generate stock-specific analysis with technical and fundamental data.
         
-        for ticker in tickers:
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
-                    gainers.append({
-                        'symbol': ticker.replace('.NS', ''),
-                        'name': stock.info.get('longName', ticker)[:25],
-                        'price': round(current, 2),
-                        'change': round(change_pct, 2),
-                        'volume': int(hist['Volume'].iloc[-1])
-                    })
-            except:
-                continue
+        Args:
+            symbol: Stock symbol
+            technical: Technical indicators (RSI, MACD, volatility, etc.)
+            fundamental: Fundamental data (PE ratio, market cap, sector, etc.)
+            risk_profile: User's risk appetite
         
-        return sorted(gainers, key=lambda x: x['change'], reverse=True)[:10]
-    
-    def get_top_losers(self):
-        """Get top losers from NIFTY 50."""
-        losers = []
-        tickers = self.SECTOR_STOCKS['Banking'][:5] + self.SECTOR_STOCKS['IT'][:5] + self.SECTOR_STOCKS['FMCG'][:5]
+        Returns:
+            AI-generated stock analysis
+        """
+        if not self.is_available():
+            return self._mock_stock_analysis(symbol, technical, fundamental, risk_profile)
         
-        for ticker in tickers:
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
-                    losers.append({
-                        'symbol': ticker.replace('.NS', ''),
-                        'name': stock.info.get('longName', ticker)[:25],
-                        'price': round(current, 2),
-                        'change': round(change_pct, 2),
-                        'volume': int(hist['Volume'].iloc[-1])
-                    })
-            except:
-                continue
-        
-        return sorted(losers, key=lambda x: x['change'])[:10]
-    
-    def get_market_summary(self):
-        """Get overall market summary."""
-        summary = {}
-        
-        for name, symbol in self.INDICES.items():
-            try:
-                stock = yf.Ticker(symbol)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
-                    summary[name] = {
-                        'value': round(current, 2),
-                        'change': round(change_pct, 2)
-                    }
-            except:
-                continue
-        
-        return summary
-    
-    def get_sector_performance(self):
-        """Get sector-wise performance."""
-        sector_performance = {}
-        
-        for sector, stocks in self.SECTOR_STOCKS.items():
-            sector_changes = []
-            for ticker in stocks[:3]:
-                try:
-                    stock = yf.Ticker(ticker)
-                    hist = stock.history(period="1d")
-                    if not hist.empty:
-                        current = hist['Close'].iloc[-1]
-                        prev_close = stock.info.get('previousClose', current)
-                        change_pct = ((current - prev_close) / prev_close) * 100
-                        sector_changes.append(change_pct)
-                except:
-                    continue
+        try:
+            prompt = (
+                f"Analyse {symbol} for a {risk_profile} investor.\n\n"
+                f"Company: {fundamental.get('name', 'N/A')} | "
+                f"Sector: {fundamental.get('sector', 'N/A')}\n"
+                f"PE: {fundamental.get('pe_ratio', 'N/A')} | "
+                f"Beta: {fundamental.get('beta', 'N/A')}\n\n"
+                f"Technical indicators: {technical}\n\n"
+                "Explain what these numbers mean in plain language using everyday analogies. "
+                "Point out the most important signal and what it suggests."
+            )
             
-            if sector_changes:
-                sector_performance[sector] = round(sum(sector_changes) / len(sector_changes), 2)
-        
-        return sector_performance
+            response = self.llm.invoke([
+                SystemMessage(content=self.SYSTEM_PROMPT),
+                HumanMessage(content=prompt)
+            ])
+            return response.content
+        except Exception as e:
+            return f"❌ AI error: {e}\n\n{self._mock_stock_analysis(symbol, technical, fundamental, risk_profile)}"
     
-    def create_candlestick_chart(self, df, symbol):
-        """Create interactive candlestick chart."""
-        fig = make_subplots(rows=3, cols=1, 
-                           shared_xaxes=True,
-                           vertical_spacing=0.05,
-                           row_heights=[0.6, 0.2, 0.2])
+    def chat(self, user_query: str, risk_profile: str = "Moderate") -> str:
+        """
+        Interactive chatbot for user queries.
         
-        # Candlestick chart
-        fig.add_trace(go.Candlestick(x=df.index,
-                                     open=df['Open'],
-                                     high=df['High'],
-                                     low=df['Low'],
-                                     close=df['Close'],
-                                     name='Price'),
-                     row=1, col=1)
+        Args:
+            user_query: User's question
+            risk_profile: User's risk appetite
         
-        # Add moving averages
-        fig.add_trace(go.Scatter(x=df.index, y=df['SMA_20'],
-                                line=dict(color='orange', width=1),
-                                name='SMA 20'),
-                     row=1, col=1)
+        Returns:
+            AI-generated response
+        """
+        if not self.is_available():
+            return self._mock_chat_response(user_query, risk_profile)
         
-        fig.add_trace(go.Scatter(x=df.index, y=df['SMA_50'],
-                                line=dict(color='blue', width=1),
-                                name='SMA 50'),
-                     row=1, col=1)
-        
-        # Volume chart
-        colors = ['red' if row['Open'] > row['Close'] else 'green' for _, row in df.iterrows()]
-        fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume', marker_color=colors),
-                     row=2, col=1)
-        
-        # RSI
-        fig.add_trace(go.Scatter(x=df.index, y=df['RSI'],
-                                line=dict(color='purple', width=1),
-                                name='RSI'),
-                     row=3, col=1)
-        
-        # RSI levels
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
-        
-        fig.update_layout(title=f'{symbol} - Price Analysis',
-                         xaxis_title='Date',
-                         yaxis_title='Price (₹)',
-                         template='plotly_dark',
-                         height=800)
-        
-        fig.update_xaxes(rangeslider_visible=False)
-        
-        return fig
+        try:
+            market_data = self._format_market_data()
+            
+            # Build messages with conversation history
+            messages = [SystemMessage(
+                content=self.SYSTEM_PROMPT +
+                f"\n\nCurrent market context:\n{market_data}\n"
+                f"User risk profile: {risk_profile}"
+            )]
+            
+            # Add recent conversation history (last 6 turns)
+            for h in self.conversation_history[-6:]:
+                if h["role"] == "user":
+                    messages.append(HumanMessage(content=h["content"]))
+                else:
+                    messages.append(AIMessage(content=h["content"]))
+            
+            messages.append(HumanMessage(content=user_query))
+            
+            response = self.llm.invoke(messages)
+            
+            # Store in conversation history
+            self.conversation_history.append({"role": "user", "content": user_query})
+            self.conversation_history.append({"role": "assistant", "content": response.content})
+            
+            return response.content
+        except Exception as e:
+            return f"❌ AI error: {e}\n\n{self._mock_chat_response(user_query, risk_profile)}"
     
-    def create_indicator_chart(self, df, symbol):
-        """Create MACD and Bollinger Bands chart."""
-        fig = make_subplots(rows=2, cols=1,
-                           shared_xaxes=True,
-                           vertical_spacing=0.1,
-                           row_heights=[0.5, 0.5])
-        
-        # Bollinger Bands
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
-                                line=dict(color='white', width=1),
-                                name='Close'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Upper'],
-                                line=dict(color='gray', width=1, dash='dash'),
-                                name='Upper BB'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Lower'],
-                                line=dict(color='gray', width=1, dash='dash'),
-                                name='Lower BB',
-                                fill='tonexty',
-                                fillcolor='rgba(128,128,128,0.2)'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Middle'],
-                                line=dict(color='orange', width=1),
-                                name='Middle BB'),
-                     row=1, col=1)
-        
-        # MACD
-        fig.add_trace(go.Scatter(x=df.index, y=df['MACD'],
-                                line=dict(color='blue', width=1),
-                                name='MACD'),
-                     row=2, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['MACD_Signal'],
-                                line=dict(color='red', width=1),
-                                name='Signal'),
-                     row=2, col=1)
-        
-        # MACD Histogram
-        colors = ['red' if val < 0 else 'green' for val in df['MACD_Histogram']]
-        fig.add_trace(go.Bar(x=df.index, y=df['MACD_Histogram'],
-                            name='Histogram', marker_color=colors),
-                     row=2, col=1)
-        
-        fig.update_layout(title=f'{symbol} - Technical Indicators',
-                         xaxis_title='Date',
-                         template='plotly_dark',
-                         height=600)
-        
-        return fig
+    def clear_conversation(self):
+        """Clear conversation history."""
+        self.conversation_history = []
     
-    def create_heatmap(self, sector_performance):
-        """Create sector performance heatmap."""
-        sectors = list(sector_performance.keys())
-        values = list(sector_performance.values())
+    # ── Mock Responses (for when LLM is unavailable) ──────────────────────────────
+    def _mock_market_insight(self, risk_profile: str) -> str:
+        """Mock market insight for demo/offline mode."""
+        sentiment = self.market_context.get('summary', {}).get('market_sentiment', 'Neutral')
+        avg_change = self.market_context.get('summary', {}).get('avg_change', 0)
         
-        colors = ['green' if v > 0 else 'red' for v in values]
-        
-        fig = go.Figure(data=go.Bar(x=sectors, y=values,
-                                    marker_color=colors,
-                                    text=[f'{v:+.2f}%' for v in values],
-                                    textposition='auto'))
-        
-        fig.update_layout(title='Sector Performance Heatmap',
-                         xaxis_title='Sector',
-                         yaxis_title='Change (%)',
-                         template='plotly_dark',
-                         height=500)
-        
-        return fig
+        return f"""
+📊 MARKET OVERVIEW
+The Indian market is currently showing {sentiment.lower()} sentiment with average movement of {avg_change:+.2f}%. 
+There are {self.market_context.get('summary', {}).get('total_gainers', 0)} gainers vs {self.market_context.get('summary', {}).get('total_losers', 0)} losers.
+
+🏭 SECTOR INSIGHTS
+The {self.market_context.get('top_sector', 'Banking')} sector is showing strength today. IT and Pharma sectors are worth watching for momentum.
+
+💡 FOR YOUR {risk_profile.upper()} RISK PROFILE
+Consider focusing on quality large-caps with consistent earnings. Maintain a diversified portfolio across 4-5 sectors.
+
+🎯 ACTIONABLE TIP
+Set price alerts for your watched stocks and review portfolio monthly.
+"""
     
-    def search_stocks(self, query):
-        """Search for stocks by name or symbol."""
-        results = []
-        all_tickers = []
+    def _mock_stock_analysis(self, symbol: str, technical: Dict, fundamental: Dict, risk_profile: str) -> str:
+        """Mock stock analysis for demo/offline mode."""
+        rsi = technical.get('RSI', 50)
+        volatility = technical.get('Volatility_%', 20)
+        price = technical.get('Price', 0)
         
-        for stocks in self.SECTOR_STOCKS.values():
-            all_tickers.extend(stocks)
+        if rsi > 70:
+            signal = "The RSI is above 70 — like a car going too fast. It might need to cool down soon."
+            outlook = "Be cautious about buying at current levels."
+        elif rsi < 30:
+            signal = "The RSI is below 30 — like a car that's barely moving. It might be oversold."
+            outlook = "Worth watching for potential bounce back."
+        else:
+            signal = "The RSI is in neutral zone (30-70) — healthy momentum."
+            outlook = "Current price action looks balanced."
         
-        for ticker in set(all_tickers):
-            try:
-                stock = yf.Ticker(ticker)
-                name = stock.info.get('longName', '')
-                symbol = ticker.replace('.NS', '')
-                
-                if query.lower() in name.lower() or query.lower() in symbol.lower():
-                    results.append({
-                        'symbol': symbol,
-                        'name': name[:40],
-                        'sector': stock.info.get('sector', 'N/A')
-                    })
-            except:
-                continue
+        return f"""
+📊 {symbol} ANALYSIS
+
+💰 PRICE ACTION: ₹{price:,}
+{signal}
+Volatility is {volatility:.1f}% — {'bumpy road' if volatility > 30 else 'smooth ride' if volatility < 15 else 'moderate conditions'}
+
+💡 KEY INSIGHT
+{outlook} For a {risk_profile.lower()} investor, this stock shows {'interesting potential' if rsi < 70 else 'cautionary signals'}.
+
+📈 SUGGESTED ACTION
+Watch key levels: Support at ₹{price * 0.95:.0f}, Resistance at ₹{price * 1.05:.0f}
+"""
+    
+    def _mock_chat_response(self, query: str, risk_profile: str) -> str:
+        """Mock chatbot response for demo/offline mode."""
+        query_lower = query.lower()
         
-        return results[:20]
+        if any(word in query_lower for word in ['gainer', 'top', 'best']):
+            gainers = self.market_context.get('gainers', [])
+            if gainers:
+                return f"Today's top gainer is {gainers[0]['symbol']} with +{gainers[0]['change']}% gain. For your {risk_profile.lower()} risk profile, consider researching fundamentally strong stocks in gaining sectors."
+            return "No significant gainers at the moment. Market appears to be consolidating."
+        
+        elif any(word in query_lower for word in ['risk', 'safe', 'volatile']):
+            volatility = self.market_context.get('summary', {}).get('avg_volatility', 18)
+            return f"Current market volatility is {volatility:.1f}%. For a {risk_profile.lower()}-risk investor, focus on large-cap stocks with consistent earnings and maintain position sizes under 5% of portfolio."
+        
+        elif any(word in query_lower for word in ['sector', 'industry']):
+            top_sector = self.market_context.get('top_sector', 'Banking')
+            return f"The {top_sector} sector is currently showing strength. This is driven by positive earnings expectations and sector-specific tailwinds. Worth researching top stocks in this space."
+        
+        elif 'rsi' in query_lower:
+            return "RSI (Relative Strength Index) is like a car's speedometer. Above 70 means too fast (overbought) — may need to slow down. Below 30 means too slow (oversold) — might speed up soon. Healthy range is 40-60."
+        
+        elif 'macd' in query_lower:
+            return "MACD is like a train's speed indicator. When the MACD line crosses above the signal line, it's like a train gaining speed (bullish). Crossing below means slowing down (bearish). The histogram shows how strong the momentum is."
+        
+        else:
+            sentiment = self.market_context.get('summary', {}).get('market_sentiment', 'Neutral')
+            return f"Current market sentiment is {sentiment.lower()}. I can help you understand market concepts, analyze specific stocks, or explain technical indicators. What would you like to know?"
 
 
-# ============================================================
-# USAGE EXAMPLE
-# ============================================================
-
+# ── Quick Test / Example Usage ─────────────────────────────────────────────────
 if __name__ == "__main__":
-    analyzer = IndianMarketAnalyzer()
+    # Load environment variables
+    from dotenv import load_dotenv
+    load_dotenv()
     
     print("\n" + "="*80)
-    print(" INDIAN MARKET ANALYZER - Testing")
+    print(" KRED AI ANALYTICS - Test Run")
     print("="*80)
     
-    # Get market summary
-    print("\n📊 MARKET SUMMARY:")
-    summary = analyzer.get_market_summary()
-    for index, data in summary.items():
-        print(f"  {index}: ₹{data['value']:,} ({data['change']:+.2f}%)")
+    # Initialize AI engine
+    ai = KredAIAnalytics()
     
-    # Get top gainers
-    print("\n🚀 TOP GAINERS:")
-    gainers = analyzer.get_top_gainers()
-    for g in gainers[:5]:
-        print(f"  {g['symbol']}: ₹{g['price']:,} (+{g['change']:.2f}%)")
+    if ai.is_available():
+        print("\n✅ AI Engine initialized successfully with Groq LLM")
+        
+        # Test with mock market context
+        test_context = {
+            'indices': {
+                'NIFTY 50': {'value': 22500, 'pct': 0.85},
+                'BSE SENSEX': {'value': 74000, 'pct': 0.75}
+            },
+            'sectors': {'Banking': 1.2, 'IT': -0.3, 'Pharma': 0.5},
+            'gainers': [{'symbol': 'RELIANCE', 'change': 2.5}],
+            'summary': {'market_sentiment': 'Bullish', 'avg_change': 0.6}
+        }
+        ai.update_market_context(test_context)
+        
+        # Generate market insight
+        print("\n📊 Market Insight:")
+        print(ai.generate_market_insight("Moderate"))
+        
+        # Test chat
+        print("\n💬 Chat Test:")
+        print(ai.chat("What is RSI?", "Moderate"))
+        
+    else:
+        print("\n⚠️ AI Engine in mock mode (LLM not configured)")
+        print("   Set GROQ_API_KEY in .env file for real AI insights")
+        
+        # Mock mode test
+        test_context = {
+            'indices': {'NIFTY 50': {'value': 22500, 'pct': 0.85}},
+            'gainers': [{'symbol': 'RELIANCE', 'change': 2.5}],
+            'summary': {'market_sentiment': 'Bullish', 'avg_volatility': 18}
+        }
+        ai.update_market_context(test_context)
+        
+        print("\n📊 Market Insight (Mock):")
+        print(ai.generate_market_insight("Moderate"))
     
-    # Get sector performance
-    print("\n🏭 SECTOR PERFORMANCE:")
-    sectors = analyzer.get_sector_performance()
-    for sector, change in sectors.items():
-        print(f"  {sector}: {change:+.2f}%")
-    
-    # Analyze a specific stock
-    print("\n📈 ANALYZING RELIANCE:")
-    df = analyzer.fetch_historical_data("RELIANCE.NS", "3mo")
-    df = analyzer.calculate_indicators(df)
-    
-    if not df.empty:
-        latest = df.iloc[-1]
-        print(f"  Current Price: ₹{latest['Close']:.2f}")
-        print(f"  RSI: {latest['RSI']:.1f}")
-        print(f"  Volatility: {latest['Volatility']:.1f}%")
-        print(f"  Volume Ratio: {latest['Volume_Ratio']:.2f}x")
+    print("\n✅ Test completed successfully!")

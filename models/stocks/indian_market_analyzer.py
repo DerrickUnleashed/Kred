@@ -1,442 +1,503 @@
 """
-============================================================
-  INDIAN MARKET ANALYZER — Complete Stock Analysis Engine
-  Replica of Yahoo Finance with India-focused features
-============================================================
+╔══════════════════════════════════════════════════════════════════════════════╗
+║          INDIAN MARKET ANALYZER — Core Analysis Engine                      ║
+║          Real-time data fetching, technical indicators, charts              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+This module provides the core market analysis functionality including:
+- Fetching real-time data from Yahoo Finance
+- Calculating technical indicators (RSI, MACD, Bollinger Bands, etc.)
+- Generating interactive charts with Plotly
+- Managing market indices, sector performance, and stock movers
 """
 
 import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 from plotly.subplots import make_subplots
-import warnings
-from datetime import datetime, timedelta
-import requests
-from bs4 import BeautifulSoup
+from datetime import datetime
 import time
+import warnings
+import threading
+from typing import Optional, Dict, List, Any
 
 warnings.filterwarnings("ignore")
 
+
 class IndianMarketAnalyzer:
-    """Complete Indian stock market analysis engine."""
-    
+    """Fetches real-time Yahoo Finance data and computes technical indicators for Indian market."""
+
     # Indian Market Indices
-    INDICES = {
-        'NIFTY 50': '^NSEI',
-        'BSE SENSEX': '^BSESN',
-        'NIFTY BANK': '^NSEBANK',
-        'NIFTY IT': '^CNXIT',
-        'NIFTY PHARMA': '^CNXPHARMA',
-        'NIFTY FMCG': '^CNXFMCG',
-        'NIFTY AUTO': '^CNXAUTO',
-        'NIFTY METAL': '^CNXMETAL'
+    INDICES: Dict[str, str] = {
+        "NIFTY 50":    "^NSEI",
+        "BSE SENSEX":  "^BSESN",
+        "NIFTY BANK":  "^NSEBANK",
+        "NIFTY IT":    "^CNXIT",
+        "NIFTY PHARMA":"^CNXPHARMA",
+        "NIFTY FMCG":  "^CNXFMCG",
+        "NIFTY AUTO":  "^CNXAUTO",
+        "NIFTY METAL": "^CNXMETAL",
     }
-    
-    # Sector-wise top stocks
-    SECTOR_STOCKS = {
-        'Banking': ['HDFCBANK.NS', 'ICICIBANK.NS', 'SBIN.NS', 'KOTAKBANK.NS', 'AXISBANK.NS'],
-        'IT': ['TCS.NS', 'INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS'],
-        'Pharma': ['SUNPHARMA.NS', 'DRREDDY.NS', 'CIPLA.NS', 'DIVISLAB.NS', 'BIOCON.NS'],
-        'FMCG': ['HINDUNILVR.NS', 'ITC.NS', 'NESTLEIND.NS', 'BRITANNIA.NS', 'DABUR.NS'],
-        'Auto': ['MARUTI.NS', 'M&M.NS', 'TATAMOTORS.NS', 'BAJAJ-AUTO.NS', 'HEROMOTOCO.NS'],
-        'Energy': ['RELIANCE.NS', 'ONGC.NS', 'NTPC.NS', 'POWERGRID.NS', 'TATAPOWER.NS'],
-        'Metal': ['TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'VEDL.NS', 'NATIONALUM.NS'],
-        'Infra': ['LT.NS', 'ADANIPORTS.NS', 'SIEMENS.NS', 'ABB.NS', 'L&T.NS']
+
+    # Sector-wise stock lists for Indian market
+    SECTOR_STOCKS: Dict[str, List[str]] = {
+        "Banking": ["HDFCBANK.NS","ICICIBANK.NS","SBIN.NS","KOTAKBANK.NS","AXISBANK.NS"],
+        "IT":      ["TCS.NS","INFY.NS","WIPRO.NS","HCLTECH.NS","TECHM.NS"],
+        "Pharma":  ["SUNPHARMA.NS","DRREDDY.NS","CIPLA.NS","DIVISLAB.NS","BIOCON.NS"],
+        "FMCG":    ["HINDUNILVR.NS","ITC.NS","NESTLEIND.NS","BRITANNIA.NS","DABUR.NS"],
+        "Auto":    ["MARUTI.NS","M&M.NS","TATAMOTORS.NS","BAJAJ-AUTO.NS","HEROMOTOCO.NS"],
+        "Energy":  ["RELIANCE.NS","ONGC.NS","NTPC.NS","POWERGRID.NS","TATAPOWER.NS"],
+        "Metal":   ["TATASTEEL.NS","JSWSTEEL.NS","HINDALCO.NS","VEDL.NS","NATIONALUM.NS"],
+        "Infra":   ["LT.NS","ADANIPORTS.NS","SIEMENS.NS","ABB.NS"],
     }
-    
+
+    # Complete list of actively tracked Indian stocks
+    ALL_TICKERS: List[str] = [
+        "RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS",
+        "HINDUNILVR.NS","SBIN.NS","BHARTIARTL.NS","KOTAKBANK.NS","ITC.NS",
+        "LT.NS","AXISBANK.NS","ASIANPAINT.NS","MARUTI.NS","SUNPHARMA.NS",
+        "WIPRO.NS","HCLTECH.NS","TATAMOTORS.NS","NESTLEIND.NS","NTPC.NS",
+        "ONGC.NS","TATASTEEL.NS","BAJAJ-AUTO.NS","M&M.NS","CIPLA.NS",
+        "DRREDDY.NS","TECHM.NS","POWERGRID.NS","ADANIPORTS.NS","JSWSTEEL.NS",
+    ]
+
     def __init__(self):
-        self.cache = {}
-        self.last_update = None
+        """Initialize the analyzer with caching mechanism."""
+        self._cache: Dict[str, Any] = {}
+        self._cache_ts: Dict[str, datetime] = {}
+        self._lock = threading.Lock()
+
+    # ── Cache Helpers ──────────────────────────────────────────────────────────
+    def _is_stale(self, key: str, ttl_s: int = 300) -> bool:
+        """Check if cached data is stale."""
+        ts = self._cache_ts.get(key)
+        return ts is None or (datetime.now() - ts).total_seconds() > ttl_s
+
+    def _set_cache(self, key: str, value: Any):
+        """Store value in cache with timestamp."""
+        with self._lock:
+            self._cache[key] = value
+            self._cache_ts[key] = datetime.now()
+
+    def _get_cache(self, key: str) -> Any:
+        """Retrieve value from cache."""
+        return self._cache.get(key)
+
+    # ── Data Fetching Methods ───────────────────────────────────────────────────
+    def fetch_historical_data(self, symbol: str, period: str = "3mo") -> pd.DataFrame:
+        """
+        Fetch historical OHLCV data for a given symbol.
         
-    def fetch_live_data(self, symbol):
-        """Fetch live data for any symbol."""
+        Args:
+            symbol: Stock symbol (e.g., "RELIANCE.NS")
+            period: Time period (1mo, 3mo, 6mo, 1y, 2y)
+        
+        Returns:
+            DataFrame with Open, High, Low, Close, Volume columns
+        """
+        key = f"hist_{symbol}_{period}"
+        if not self._is_stale(key, 600):
+            return self._get_cache(key)
+        
         try:
-            stock = yf.Ticker(symbol)
-            data = stock.history(period="1d", interval="1m")
-            if not data.empty:
-                latest = data.iloc[-1]
-                return {
-                    'price': round(latest['Close'], 2),
-                    'open': round(latest['Open'], 2),
-                    'high': round(latest['High'], 2),
-                    'low': round(latest['Low'], 2),
-                    'volume': int(latest['Volume']),
-                    'timestamp': datetime.now()
-                }
-            return None
-        except:
-            return None
-    
-    def fetch_historical_data(self, symbol, period="1mo"):
-        """Fetch historical OHLCV data."""
-        try:
-            stock = yf.Ticker(symbol)
-            df = stock.history(period=period)
-            df.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'Dividends', 'Stock Splits']
-            df.index = pd.to_datetime(df.index)
-            return df
-        except:
-            return pd.DataFrame()
-    
-    def get_company_info(self, symbol):
-        """Get detailed company information."""
-        try:
-            stock = yf.Ticker(symbol)
-            info = stock.info
-            return {
-                'name': info.get('longName', 'N/A'),
-                'sector': info.get('sector', 'N/A'),
-                'industry': info.get('industry', 'N/A'),
-                'market_cap': info.get('marketCap', 'N/A'),
-                'pe_ratio': info.get('trailingPE', 'N/A'),
-                'eps': info.get('trailingEps', 'N/A'),
-                'dividend_yield': info.get('dividendYield', 0) * 100 if info.get('dividendYield') else 0,
-                '52_week_high': info.get('fiftyTwoWeekHigh', 'N/A'),
-                '52_week_low': info.get('fiftyTwoWeekLow', 'N/A'),
-                'avg_volume': info.get('averageVolume', 'N/A'),
-                'beta': info.get('beta', 'N/A')
-            }
-        except:
-            return {}
-    
-    def calculate_indicators(self, df):
-        """Calculate all technical indicators."""
-        if df.empty:
-            return df
+            tk = yf.Ticker(symbol)
+            df = tk.history(period=period)
+            if df.empty:
+                return pd.DataFrame()
             
-        df = df.copy()
+            df.index = pd.to_datetime(df.index).tz_localize(None)
+            if len(df.columns) >= 6:
+                df = df.iloc[:, :6]
+                df.columns = ["Open", "High", "Low", "Close", "Volume", "Dividends"]
+            
+            self._set_cache(key, df)
+            return df
+        except Exception:
+            return pd.DataFrame()
+
+    def get_company_info(self, symbol: str) -> Dict:
+        """
+        Get detailed company information.
         
-        # Moving Averages
-        df['SMA_20'] = df['Close'].rolling(20).mean()
-        df['SMA_50'] = df['Close'].rolling(50).mean()
-        df['SMA_200'] = df['Close'].rolling(200).mean()
-        df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-        df['EMA_26'] = df['Close'].ewm(span=26, adjust=False).mean()
+        Args:
+            symbol: Stock symbol (e.g., "RELIANCE.NS")
         
-        # MACD
-        df['MACD'] = df['EMA_12'] - df['EMA_26']
-        df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
-        df['MACD_Histogram'] = df['MACD'] - df['MACD_Signal']
+        Returns:
+            Dictionary with company details (name, sector, market cap, PE ratio, etc.)
+        """
+        key = f"info_{symbol}"
+        if not self._is_stale(key, 3600):
+            return self._get_cache(key)
         
-        # RSI
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
+        try:
+            info = yf.Ticker(symbol).info
+            div_yield = info.get("dividendYield") or 0
+            
+            result = {
+                "name":          info.get("longName", symbol),
+                "sector":        info.get("sector", "N/A"),
+                "industry":      info.get("industry", "N/A"),
+                "market_cap":    info.get("marketCap"),
+                "pe_ratio":      info.get("trailingPE"),
+                "eps":           info.get("trailingEps"),
+                "dividend_yield": round(div_yield * 100, 2),
+                "52w_high":      info.get("fiftyTwoWeekHigh"),
+                "52w_low":       info.get("fiftyTwoWeekLow"),
+                "avg_volume":    info.get("averageVolume"),
+                "beta":          info.get("beta"),
+                "description":   info.get("longBusinessSummary", ""),
+            }
+            self._set_cache(key, result)
+            return result
+        except Exception:
+            return {}
+
+    def get_market_summary(self) -> Dict:
+        """
+        Get current market indices summary.
         
-        # Bollinger Bands
-        df['BB_Middle'] = df['Close'].rolling(20).mean()
-        bb_std = df['Close'].rolling(20).std()
-        df['BB_Upper'] = df['BB_Middle'] + (bb_std * 2)
-        df['BB_Lower'] = df['BB_Middle'] - (bb_std * 2)
+        Returns:
+            Dictionary with index names and their values, changes, percentages
+        """
+        key = "market_summary"
+        if not self._is_stale(key, 120):
+            return self._get_cache(key)
         
-        # Volatility
-        df['Daily_Return'] = df['Close'].pct_change()
-        df['Volatility'] = df['Daily_Return'].rolling(20).std() * np.sqrt(252) * 100
-        
-        # Volume Indicators
-        df['Volume_SMA'] = df['Volume'].rolling(20).mean()
-        df['Volume_Ratio'] = df['Volume'] / df['Volume_SMA']
-        
-        # ATR
-        high_low = df['High'] - df['Low']
-        high_close = abs(df['High'] - df['Close'].shift())
-        low_close = abs(df['Low'] - df['Close'].shift())
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = np.max(ranges, axis=1)
-        df['ATR'] = true_range.rolling(14).mean()
-        
-        return df
-    
-    def get_top_gainers(self):
-        """Get top gainers from NIFTY 50."""
-        gainers = []
-        tickers = self.SECTOR_STOCKS['Banking'][:5] + self.SECTOR_STOCKS['IT'][:5] + self.SECTOR_STOCKS['FMCG'][:5]
-        
-        for ticker in tickers:
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
-                    gainers.append({
-                        'symbol': ticker.replace('.NS', ''),
-                        'name': stock.info.get('longName', ticker)[:25],
-                        'price': round(current, 2),
-                        'change': round(change_pct, 2),
-                        'volume': int(hist['Volume'].iloc[-1])
-                    })
-            except:
-                continue
-        
-        return sorted(gainers, key=lambda x: x['change'], reverse=True)[:10]
-    
-    def get_top_losers(self):
-        """Get top losers from NIFTY 50."""
-        losers = []
-        tickers = self.SECTOR_STOCKS['Banking'][:5] + self.SECTOR_STOCKS['IT'][:5] + self.SECTOR_STOCKS['FMCG'][:5]
-        
-        for ticker in tickers:
-            try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
-                    losers.append({
-                        'symbol': ticker.replace('.NS', ''),
-                        'name': stock.info.get('longName', ticker)[:25],
-                        'price': round(current, 2),
-                        'change': round(change_pct, 2),
-                        'volume': int(hist['Volume'].iloc[-1])
-                    })
-            except:
-                continue
-        
-        return sorted(losers, key=lambda x: x['change'])[:10]
-    
-    def get_market_summary(self):
-        """Get overall market summary."""
         summary = {}
-        
         for name, symbol in self.INDICES.items():
             try:
-                stock = yf.Ticker(symbol)
-                hist = stock.history(period="1d")
-                if not hist.empty:
-                    current = hist['Close'].iloc[-1]
-                    prev_close = stock.info.get('previousClose', current)
-                    change_pct = ((current - prev_close) / prev_close) * 100
-                    
+                tk = yf.Ticker(symbol)
+                hist = tk.history(period="2d")
+                if len(hist) >= 2:
+                    prev = hist["Close"].iloc[-2]
+                    curr = hist["Close"].iloc[-1]
+                    chg = curr - prev
+                    chg_p = (chg / prev) * 100
                     summary[name] = {
-                        'value': round(current, 2),
-                        'change': round(change_pct, 2)
+                        "value": round(curr, 2),
+                        "change": round(chg, 2),
+                        "pct": round(chg_p, 2),
                     }
-            except:
+                elif len(hist) == 1:
+                    curr = hist["Close"].iloc[-1]
+                    summary[name] = {"value": round(curr, 2), "change": 0.0, "pct": 0.0}
+            except Exception:
                 continue
         
+        self._set_cache(key, summary)
         return summary
-    
-    def get_sector_performance(self):
-        """Get sector-wise performance."""
-        sector_performance = {}
+
+    def get_movers(self) -> Dict[str, List[Dict]]:
+        """
+        Get top gainers and losers from tracked stocks.
         
-        for sector, stocks in self.SECTOR_STOCKS.items():
-            sector_changes = []
-            for ticker in stocks[:3]:
+        Returns:
+            Dictionary with 'gainers' and 'losers' lists
+        """
+        key = "movers"
+        if not self._is_stale(key, 300):
+            return self._get_cache(key)
+        
+        movers = []
+        for ticker in self.ALL_TICKERS:
+            try:
+                tk = yf.Ticker(ticker)
+                hist = tk.history(period="2d")
+                if len(hist) < 2:
+                    continue
+                
+                prev = hist["Close"].iloc[-2]
+                curr = hist["Close"].iloc[-1]
+                pct = ((curr - prev) / prev) * 100
+                
+                movers.append({
+                    "symbol": ticker.replace(".NS", ""),
+                    "name": tk.info.get("shortName", ticker)[:22],
+                    "price": round(curr, 2),
+                    "change": round(pct, 2),
+                    "volume": int(hist["Volume"].iloc[-1]),
+                })
+            except Exception:
+                continue
+        
+        movers.sort(key=lambda x: x["change"], reverse=True)
+        result = {"gainers": movers[:8], "losers": list(reversed(movers[-8:]))}
+        self._set_cache(key, result)
+        return result
+
+    def get_sector_performance(self) -> Dict[str, float]:
+        """
+        Calculate sector-wise performance based on top stocks.
+        
+        Returns:
+            Dictionary with sector names and their average percentage changes
+        """
+        key = "sectors"
+        if not self._is_stale(key, 300):
+            return self._get_cache(key)
+        
+        perf = {}
+        for sector, tickers in self.SECTOR_STOCKS.items():
+            changes = []
+            for t in tickers[:4]:
                 try:
-                    stock = yf.Ticker(ticker)
-                    hist = stock.history(period="1d")
-                    if not hist.empty:
-                        current = hist['Close'].iloc[-1]
-                        prev_close = stock.info.get('previousClose', current)
-                        change_pct = ((current - prev_close) / prev_close) * 100
-                        sector_changes.append(change_pct)
-                except:
+                    hist = yf.Ticker(t).history(period="2d")
+                    if len(hist) >= 2:
+                        changes.append(((hist["Close"].iloc[-1] - hist["Close"].iloc[-2])
+                                        / hist["Close"].iloc[-2]) * 100)
+                except Exception:
                     continue
             
-            if sector_changes:
-                sector_performance[sector] = round(sum(sector_changes) / len(sector_changes), 2)
+            if changes:
+                perf[sector] = round(sum(changes) / len(changes), 2)
         
-        return sector_performance
-    
-    def create_candlestick_chart(self, df, symbol):
-        """Create interactive candlestick chart."""
-        fig = make_subplots(rows=3, cols=1, 
-                           shared_xaxes=True,
-                           vertical_spacing=0.05,
-                           row_heights=[0.6, 0.2, 0.2])
+        self._set_cache(key, perf)
+        return perf
+
+    # ── Technical Indicators ────────────────────────────────────────────────────
+    @staticmethod
+    def calculate_indicators(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calculate all technical indicators for the given DataFrame.
         
-        # Candlestick chart
-        fig.add_trace(go.Candlestick(x=df.index,
-                                     open=df['Open'],
-                                     high=df['High'],
-                                     low=df['Low'],
-                                     close=df['Close'],
-                                     name='Price'),
-                     row=1, col=1)
+        Indicators computed:
+        - SMA_20, SMA_50, SMA_200 (Simple Moving Averages)
+        - EMA_12, EMA_26 (Exponential Moving Averages)
+        - MACD, MACD_Signal, MACD_Histogram
+        - RSI (Relative Strength Index)
+        - Bollinger Bands (BB_Mid, BB_Up, BB_Lo)
+        - Volatility (annualized)
+        - Volume_Ratio (volume relative to average)
+        - ATR (Average True Range)
         
-        # Add moving averages
-        fig.add_trace(go.Scatter(x=df.index, y=df['SMA_20'],
-                                line=dict(color='orange', width=1),
-                                name='SMA 20'),
-                     row=1, col=1)
+        Returns:
+            DataFrame with added indicator columns
+        """
+        if df.empty or len(df) < 20:
+            return df
         
-        fig.add_trace(go.Scatter(x=df.index, y=df['SMA_50'],
-                                line=dict(color='blue', width=1),
-                                name='SMA 50'),
-                     row=1, col=1)
+        df = df.copy()
+
+        # Moving Averages
+        df["SMA_20"] = df["Close"].rolling(20).mean()
+        df["SMA_50"] = df["Close"].rolling(50).mean()
+        df["SMA_200"] = df["Close"].rolling(200).mean()
+        df["EMA_12"] = df["Close"].ewm(span=12, adjust=False).mean()
+        df["EMA_26"] = df["Close"].ewm(span=26, adjust=False).mean()
+
+        # MACD
+        df["MACD"] = df["EMA_12"] - df["EMA_26"]
+        df["MACD_Signal"] = df["MACD"].ewm(span=9, adjust=False).mean()
+        df["MACD_Histogram"] = df["MACD"] - df["MACD_Signal"]
+
+        # RSI (14-day)
+        delta = df["Close"].diff()
+        gain = delta.where(delta > 0, 0).rolling(14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        rs = gain / loss.replace(0, 1e-9)
+        df["RSI"] = 100 - (100 / (1 + rs))
+
+        # Bollinger Bands
+        bb_mid = df["Close"].rolling(20).mean()
+        bb_std = df["Close"].rolling(20).std()
+        df["BB_Mid"] = bb_mid
+        df["BB_Up"] = bb_mid + 2 * bb_std
+        df["BB_Lo"] = bb_mid - 2 * bb_std
+
+        # Volatility & Volume
+        df["Daily_Return"] = df["Close"].pct_change()
+        df["Volatility"] = df["Daily_Return"].rolling(20).std() * np.sqrt(252) * 100
+        df["Volume_SMA"] = df["Volume"].rolling(20).mean()
+        df["Volume_Ratio"] = df["Volume"] / df["Volume_SMA"].replace(0, 1)
+
+        # ATR (Average True Range)
+        hl = df["High"] - df["Low"]
+        hcp = (df["High"] - df["Close"].shift()).abs()
+        lcp = (df["Low"] - df["Close"].shift()).abs()
+        df["ATR"] = pd.concat([hl, hcp, lcp], axis=1).max(axis=1).rolling(14).mean()
+
+        return df
+
+    # ── Charting Methods ────────────────────────────────────────────────────────
+    @staticmethod
+    def candlestick_chart(df: pd.DataFrame, symbol: str) -> go.Figure:
+        """
+        Create interactive candlestick chart with volume and RSI.
         
-        # Volume chart
-        colors = ['red' if row['Open'] > row['Close'] else 'green' for _, row in df.iterrows()]
-        fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name='Volume', marker_color=colors),
-                     row=2, col=1)
+        Args:
+            df: DataFrame with OHLCV data and indicators
+            symbol: Stock symbol for title
+        
+        Returns:
+            Plotly figure object
+        """
+        fig = make_subplots(
+            rows=3, cols=1, shared_xaxes=True,
+            vertical_spacing=0.04, row_heights=[0.6, 0.2, 0.2],
+            subplot_titles=[f"{symbol} — Price & MAs", "Volume", "RSI (14)"],
+        )
+        
+        # Candlestick
+        fig.add_trace(go.Candlestick(
+            x=df.index, open=df["Open"], high=df["High"],
+            low=df["Low"], close=df["Close"],
+            increasing_line_color="#22c55e", decreasing_line_color="#ef4444",
+            name="Price"), row=1, col=1)
+        
+        # Moving Averages and Bollinger Bands
+        for col, colour, dash in [("SMA_20", "#f59e0b", "solid"),
+                                  ("SMA_50", "#3b82f6", "solid"),
+                                  ("BB_Up", "#6b7280", "dash"),
+                                  ("BB_Lo", "#6b7280", "dash")]:
+            if col in df:
+                fig.add_trace(go.Scatter(
+                    x=df.index, y=df[col],
+                    line=dict(color=colour, width=1, dash=dash),
+                    name=col, opacity=0.8), row=1, col=1)
+        
+        # Volume bars (colored by price direction)
+        vol_colors = ["#ef4444" if o > c else "#22c55e"
+                      for o, c in zip(df["Open"], df["Close"])]
+        fig.add_trace(go.Bar(
+            x=df.index, y=df["Volume"],
+            marker_color=vol_colors, name="Volume", opacity=0.7), row=2, col=1)
         
         # RSI
-        fig.add_trace(go.Scatter(x=df.index, y=df['RSI'],
-                                line=dict(color='purple', width=1),
-                                name='RSI'),
-                     row=3, col=1)
+        if "RSI" in df:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df["RSI"],
+                line=dict(color="#a78bfa", width=1.5), name="RSI"), row=3, col=1)
+            fig.add_hline(y=70, line_dash="dash", line_color="#ef4444",
+                          line_width=1, row=3, col=1)
+            fig.add_hline(y=30, line_dash="dash", line_color="#22c55e",
+                          line_width=1, row=3, col=1)
         
-        # RSI levels
-        fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
-        fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
-        
-        fig.update_layout(title=f'{symbol} - Price Analysis',
-                         xaxis_title='Date',
-                         yaxis_title='Price (₹)',
-                         template='plotly_dark',
-                         height=800)
-        
-        fig.update_xaxes(rangeslider_visible=False)
-        
+        fig.update_layout(
+            template="plotly_dark", height=780,
+            paper_bgcolor="#0a0e1a", plot_bgcolor="#0d1421",
+            font=dict(color="#94a3b8"), showlegend=True,
+            legend=dict(orientation="h", y=1.02, x=0),
+            xaxis_rangeslider_visible=False,
+        )
         return fig
-    
-    def create_indicator_chart(self, df, symbol):
-        """Create MACD and Bollinger Bands chart."""
-        fig = make_subplots(rows=2, cols=1,
-                           shared_xaxes=True,
-                           vertical_spacing=0.1,
-                           row_heights=[0.5, 0.5])
+
+    @staticmethod
+    def indicator_chart(df: pd.DataFrame, symbol: str) -> go.Figure:
+        """
+        Create technical indicator chart with Bollinger Bands and MACD.
+        
+        Args:
+            df: DataFrame with OHLCV data and indicators
+            symbol: Stock symbol for title
+        
+        Returns:
+            Plotly figure object
+        """
+        fig = make_subplots(
+            rows=2, cols=1, shared_xaxes=True,
+            vertical_spacing=0.08, row_heights=[0.55, 0.45],
+            subplot_titles=[f"{symbol} — Bollinger Bands", "MACD"],
+        )
         
         # Bollinger Bands
-        fig.add_trace(go.Scatter(x=df.index, y=df['Close'],
-                                line=dict(color='white', width=1),
-                                name='Close'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Upper'],
-                                line=dict(color='gray', width=1, dash='dash'),
-                                name='Upper BB'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Lower'],
-                                line=dict(color='gray', width=1, dash='dash'),
-                                name='Lower BB',
-                                fill='tonexty',
-                                fillcolor='rgba(128,128,128,0.2)'),
-                     row=1, col=1)
-        
-        fig.add_trace(go.Scatter(x=df.index, y=df['BB_Middle'],
-                                line=dict(color='orange', width=1),
-                                name='Middle BB'),
-                     row=1, col=1)
+        for col, colour, dash in [("BB_Up", "#6b7280", "dash"),
+                                  ("BB_Lo", "#6b7280", "dash"),
+                                  ("BB_Mid", "#f59e0b", "solid"),
+                                  ("Close", "#f1f5f9", "solid")]:
+            if col in df:
+                fig.add_trace(go.Scatter(
+                    x=df.index, y=df[col],
+                    line=dict(color=colour, width=1, dash=dash),
+                    name=col), row=1, col=1)
         
         # MACD
-        fig.add_trace(go.Scatter(x=df.index, y=df['MACD'],
-                                line=dict(color='blue', width=1),
-                                name='MACD'),
-                     row=2, col=1)
+        if "MACD" in df:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df["MACD"],
+                line=dict(color="#3b82f6", width=1.5), name="MACD"), row=2, col=1)
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df["MACD_Signal"],
+                line=dict(color="#ef4444", width=1.5), name="Signal"), row=2, col=1)
+            
+            hist_colors = ["#22c55e" if v >= 0 else "#ef4444"
+                           for v in df["MACD_Histogram"]]
+            fig.add_trace(go.Bar(
+                x=df.index, y=df["MACD_Histogram"],
+                marker_color=hist_colors, name="Histogram", opacity=0.7), row=2, col=1)
         
-        fig.add_trace(go.Scatter(x=df.index, y=df['MACD_Signal'],
-                                line=dict(color='red', width=1),
-                                name='Signal'),
-                     row=2, col=1)
-        
-        # MACD Histogram
-        colors = ['red' if val < 0 else 'green' for val in df['MACD_Histogram']]
-        fig.add_trace(go.Bar(x=df.index, y=df['MACD_Histogram'],
-                            name='Histogram', marker_color=colors),
-                     row=2, col=1)
-        
-        fig.update_layout(title=f'{symbol} - Technical Indicators',
-                         xaxis_title='Date',
-                         template='plotly_dark',
-                         height=600)
-        
+        fig.update_layout(
+            template="plotly_dark", height=580,
+            paper_bgcolor="#0a0e1a", plot_bgcolor="#0d1421",
+            font=dict(color="#94a3b8"),
+        )
         return fig
-    
-    def create_heatmap(self, sector_performance):
-        """Create sector performance heatmap."""
-        sectors = list(sector_performance.keys())
-        values = list(sector_performance.values())
+
+    @staticmethod
+    def sector_heatmap(perf: Dict[str, float]) -> go.Figure:
+        """
+        Create sector performance heatmap bar chart.
         
-        colors = ['green' if v > 0 else 'red' for v in values]
+        Args:
+            perf: Dictionary with sector names and performance percentages
         
-        fig = go.Figure(data=go.Bar(x=sectors, y=values,
-                                    marker_color=colors,
-                                    text=[f'{v:+.2f}%' for v in values],
-                                    textposition='auto'))
+        Returns:
+            Plotly figure object
+        """
+        if not perf:
+            return go.Figure()
         
-        fig.update_layout(title='Sector Performance Heatmap',
-                         xaxis_title='Sector',
-                         yaxis_title='Change (%)',
-                         template='plotly_dark',
-                         height=500)
+        sectors = list(perf.keys())
+        values = list(perf.values())
+        colors = ["#22c55e" if v >= 0 else "#ef4444" for v in values]
         
+        fig = go.Figure(go.Bar(
+            x=sectors, y=values,
+            marker_color=colors,
+            text=[f"{v:+.2f}%" for v in values],
+            textposition="outside",
+        ))
+        
+        fig.update_layout(
+            title="Sector Performance", template="plotly_dark",
+            height=380, paper_bgcolor="#0a0e1a", plot_bgcolor="#0d1421",
+            font=dict(color="#94a3b8"),
+            yaxis_title="% Change",
+            margin=dict(t=40, b=20),
+        )
         return fig
-    
-    def search_stocks(self, query):
-        """Search for stocks by name or symbol."""
-        results = []
-        all_tickers = []
-        
-        for stocks in self.SECTOR_STOCKS.values():
-            all_tickers.extend(stocks)
-        
-        for ticker in set(all_tickers):
-            try:
-                stock = yf.Ticker(ticker)
-                name = stock.info.get('longName', '')
-                symbol = ticker.replace('.NS', '')
-                
-                if query.lower() in name.lower() or query.lower() in symbol.lower():
-                    results.append({
-                        'symbol': symbol,
-                        'name': name[:40],
-                        'sector': stock.info.get('sector', 'N/A')
-                    })
-            except:
-                continue
-        
-        return results[:20]
 
 
-# ============================================================
-# USAGE EXAMPLE
-# ============================================================
-
+# ── Quick Test / Example Usage ─────────────────────────────────────────────────
 if __name__ == "__main__":
     analyzer = IndianMarketAnalyzer()
     
     print("\n" + "="*80)
-    print(" INDIAN MARKET ANALYZER - Testing")
+    print(" INDIAN MARKET ANALYZER - Test Run")
     print("="*80)
     
-    # Get market summary
+    # Test market summary
     print("\n📊 MARKET SUMMARY:")
     summary = analyzer.get_market_summary()
-    for index, data in summary.items():
-        print(f"  {index}: ₹{data['value']:,} ({data['change']:+.2f}%)")
+    for idx, data in summary.items():
+        print(f"  {idx}: ₹{data['value']:,} ({data['pct']:+.2f}%)")
     
-    # Get top gainers
+    # Test movers
     print("\n🚀 TOP GAINERS:")
-    gainers = analyzer.get_top_gainers()
-    for g in gainers[:5]:
+    movers = analyzer.get_movers()
+    for g in movers.get("gainers", [])[:5]:
         print(f"  {g['symbol']}: ₹{g['price']:,} (+{g['change']:.2f}%)")
     
-    # Get sector performance
-    print("\n🏭 SECTOR PERFORMANCE:")
-    sectors = analyzer.get_sector_performance()
-    for sector, change in sectors.items():
-        print(f"  {sector}: {change:+.2f}%")
+    print("\n📉 TOP LOSERS:")
+    for l in movers.get("losers", [])[:5]:
+        print(f"  {l['symbol']}: ₹{l['price']:,} ({l['change']:.2f}%)")
     
-    # Analyze a specific stock
-    print("\n📈 ANALYZING RELIANCE:")
-    df = analyzer.fetch_historical_data("RELIANCE.NS", "3mo")
-    df = analyzer.calculate_indicators(df)
+    # Test company info
+    print("\n🏢 COMPANY INFO (RELIANCE):")
+    info = analyzer.get_company_info("RELIANCE.NS")
+    print(f"  Name: {info.get('name', 'N/A')}")
+    print(f"  Sector: {info.get('sector', 'N/A')}")
+    print(f"  Market Cap: {info.get('market_cap', 'N/A')}")
+    print(f"  P/E Ratio: {info.get('pe_ratio', 'N/A')}")
     
-    if not df.empty:
-        latest = df.iloc[-1]
-        print(f"  Current Price: ₹{latest['Close']:.2f}")
-        print(f"  RSI: {latest['RSI']:.1f}")
-        print(f"  Volatility: {latest['Volatility']:.1f}%")
-        print(f"  Volume Ratio: {latest['Volume_Ratio']:.2f}x")
+    print("\n✅ Test completed successfully!")
