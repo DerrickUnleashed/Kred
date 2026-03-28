@@ -3,18 +3,34 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import Navbar from './Navbar';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-} from 'recharts';
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  BarController,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  BarController,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  Filler,
+);
 
 const API_URL = import.meta.env.VITE_STOCKS_API_URL || 'http://localhost:8000';
 
@@ -41,6 +57,37 @@ const RISK_PROFILES = {
     'Consider momentum stocks with higher beta',
     'Be prepared for volatility and longer holding periods',
   ],
+};
+
+const chartDefaults = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: { color: '#94A3B8', font: { family: 'IBM Plex Sans' } },
+    },
+    tooltip: {
+      backgroundColor: '#0F172A',
+      borderColor: '#1E293B',
+      borderWidth: 1,
+      titleColor: '#F8FAFC',
+      bodyColor: '#F8FAFC',
+      padding: 12,
+      cornerRadius: 8,
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: '#1E293B', lineWidth: 1 },
+      ticks: { color: '#94A3B8', font: { family: 'IBM Plex Sans', size: 10 } },
+      border: { color: '#1E293B' },
+    },
+    y: {
+      grid: { color: '#1E293B', lineWidth: 1 },
+      ticks: { color: '#94A3B8', font: { family: 'IBM Plex Sans', size: 10 } },
+      border: { color: '#1E293B' },
+    },
+  },
 };
 
 export default function Stocks() {
@@ -217,6 +264,58 @@ export default function Stocks() {
     return `₹${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const sectorChartData = {
+    labels: marketData.sectorPerf?.map(d => d.sector) || [],
+    datasets: [
+      {
+        label: 'Change %',
+        data: marketData.sectorPerf?.map(d => d.change) || [],
+        backgroundColor: marketData.sectorPerf?.map(d => d.change >= 0 ? '#22c55e' : '#ef4444') || [],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const volumeChartData = {
+    labels: historicalData?.map(d => d.date) || [],
+    datasets: [
+      {
+        label: 'Volume',
+        data: historicalData?.map(d => d.volume) || [],
+        backgroundColor: historicalData?.map(d => d.close >= d.open ? '#22c55e80' : '#ef444480') || [],
+      },
+    ],
+  };
+
+  const candlestickData = {
+    labels: historicalData?.map(d => d.date) || [],
+    datasets: [
+      {
+        label: 'Close Price',
+        data: historicalData?.map(d => d.close) || [],
+        backgroundColor: historicalData?.map(d => d.close >= (d.open || d.close) ? '#22c55e' : '#ef4444') || [],
+        borderColor: historicalData?.map(d => d.close >= (d.open || d.close) ? '#16a34a' : '#dc2626') || [],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const priceLineData = {
+    labels: historicalData?.map(d => d.date) || [],
+    datasets: [
+      {
+        label: 'Close Price',
+        data: historicalData?.map(d => d.close) || [],
+        borderColor: '#3b82f6',
+        backgroundColor: '#3b82f620',
+        fill: true,
+        tension: 0,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} onLogout={handleLogout} />
@@ -260,7 +359,7 @@ export default function Stocks() {
                 <span>Market Indices</span>
                 <button onClick={fetchMarketData} className="text-blue-400 text-sm hover:text-blue-300">Refresh</button>
               </h2>
-              {marketData.indices.length > 0 ? (
+              {marketData.indices?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {marketData.indices.map((idx) => (
                     <div key={idx.name} className="bg-background/50 rounded-xl p-4 border border-secondary">
@@ -279,8 +378,8 @@ export default function Stocks() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400"> Top Gainers</h2>
-                {marketData.gainers.length > 0 ? (
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-green-400">🚀 Top Gainers</h2>
+                {marketData.gainers?.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.gainers.map((g) => (
                       <div key={g.symbol} className="flex items-center justify-between bg-background/50 rounded-lg p-3 border border-secondary">
@@ -301,8 +400,8 @@ export default function Stocks() {
               </div>
 
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400"> Top Losers</h2>
-                {marketData.losers.length > 0 ? (
+                <h2 className="text-lg font-semibold text-text-primary mb-4 text-red-400">📉 Top Losers</h2>
+                {marketData.losers?.length > 0 ? (
                   <div className="space-y-2">
                     {marketData.losers.map((l) => (
                       <div key={l.symbol} className="flex items-center justify-between bg-background/50 rounded-lg p-3 border border-secondary">
@@ -325,27 +424,10 @@ export default function Stocks() {
 
             <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-text-primary mb-4">Sector Performance</h2>
-              {marketData.sectorPerf.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={marketData.sectorPerf}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                    <XAxis dataKey="sector" stroke="#94A3B8" />
-                    <YAxis stroke="#94A3B8" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#0F172A', 
-                        border: '1px solid #1E293B',
-                        borderRadius: '8px',
-                        color: '#F8FAFC'
-                      }}
-                    />
-                    <Bar dataKey="change" radius={[4, 4, 0, 0]}>
-                      {marketData.sectorPerf.map((entry, index) => (
-                        <rect key={`cell-${index}`} fill={entry.change >= 0 ? '#22c55e' : '#ef4444'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              {marketData.sectorPerf?.length > 0 ? (
+                <div style={{ height: '300px' }}>
+                  <Bar data={sectorChartData} options={chartDefaults} />
+                </div>
               ) : (
                 <div className="text-text-muted">Loading sector data...</div>
               )}
@@ -443,32 +525,54 @@ export default function Stocks() {
                     </>
                   )}
 
-                  <h3 className="text-lg font-semibold text-text-primary mb-4">Price History</h3>
-                  {historicalData.length > 0 ? (
-                    <div className="bg-background/50 rounded-xl p-4 border border-secondary">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={historicalData}>
-                          <defs>
-                            <linearGradient id="colorClose" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                          <XAxis dataKey="date" stroke="#94A3B8" />
-                          <YAxis stroke="#94A3B8" domain={['auto', 'auto']} />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: '#0F172A', 
-                              border: '1px solid #1E293B',
-                              borderRadius: '8px',
-                              color: '#F8FAFC'
-                            }}
+                  {historicalData?.length > 0 ? (
+                    <>
+                      <h3 className="text-lg font-semibold text-text-primary mb-4">Price Trend</h3>
+                      <div className="bg-background/50 rounded-xl p-4 border border-secondary mb-6">
+                        <div style={{ height: '250px' }}>
+                          <Line 
+                            key={`line-${selectedStock}`}
+                            data={priceLineData} 
+                            options={{
+                              ...chartDefaults,
+                              elements: { line: { tension: 0 } },
+                              plugins: {
+                                ...chartDefaults.plugins,
+                                legend: { display: false },
+                              },
+                            }} 
                           />
-                          <Area type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={1} fill="url(#colorClose)" name="Price" />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
+                        </div>
+                      </div>
+
+                      <h3 className="text-lg font-semibold text-text-primary mb-4">Volume</h3>
+                      <div className="bg-background/50 rounded-xl p-4 border border-secondary">
+                        <div style={{ height: '150px' }}>
+                          <Bar 
+                            key={`volume-${selectedStock}`}
+                            data={volumeChartData} 
+                            options={{
+                              ...chartDefaults,
+                              plugins: {
+                                ...chartDefaults.plugins,
+                                legend: { display: false },
+                              },
+                              scales: {
+                                ...chartDefaults.scales,
+                                x: { ...chartDefaults.scales.x, display: false },
+                                y: {
+                                  ...chartDefaults.scales.y,
+                                  ticks: {
+                                    ...chartDefaults.scales.y.ticks,
+                                    callback: (val) => `${(val / 1000000).toFixed(0)}M`,
+                                  },
+                                },
+                              },
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="text-text-muted">Loading price history...</div>
                   )}

@@ -13,7 +13,10 @@
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.73",
     "@supabase/supabase-js": "^2.100.1",
+    "chart.js": "^4.5.1",
+    "date-fns": "^4.1.0",
     "react": "^19.2.4",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1"
