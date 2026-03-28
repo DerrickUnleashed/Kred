@@ -1,0 +1,6 @@
+huggingface-hub
+Pillow
+numpy
+requests
+python-dotenv
+fal-client
