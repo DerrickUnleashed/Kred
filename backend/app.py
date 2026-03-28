@@ -20,7 +20,7 @@ load_dotenv()
 app = FastAPI(title="KRED Stocks API", version="1.0.0")
 
 origins = [
-    "https://your-vercel-project-name.vercel.app",
+    "https://kred-git-main-derrickunleasheds-projects.vercel.app/",
     "http://localhost:3000", # For local testing
 ]
 
