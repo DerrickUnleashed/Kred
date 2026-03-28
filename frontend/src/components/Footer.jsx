@@ -60,7 +60,7 @@ export default function Footer() {
             © 2026 KRED. All rights reserved.
           </p>
           <div className="flex gap-4">
-          {['twitter', 'linkedin', 'github'].map((social, index) => (
+          {['github'].map((social, index) => (
             <a 
               href="https://github.com/DerrickUnleashed/Kred.git" 
               target="_blank" 
