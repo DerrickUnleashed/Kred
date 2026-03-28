@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from .routes import router as ai_behavior_router
+from ai_behavior_engine.routes import router as ai_behavior_router
 
 app = FastAPI(title="AI Behavior Engine (Dev Mode)")
 
