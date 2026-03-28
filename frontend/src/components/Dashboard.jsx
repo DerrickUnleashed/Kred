@@ -30,6 +30,7 @@ const CATEGORIES = [
 ];
 
 const COLORS = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#2563EB', '#1D4ED8', '#1E40AF', '#1E3A8A', '#172554', '#3B82F680'];
+const ESSENTIAL_COLORS = ['#3B82F6', '#F97316'];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export default function Dashboard() {
     quantity: '',
     cost_per_unit: '',
     category: 'Groceries',
+    is_essential: false,
   });
   const [editingId, setEditingId] = useState(null);
 
@@ -149,6 +151,7 @@ export default function Dashboard() {
       quantity: parseInt(productForm.quantity),
       cost_per_unit: parseFloat(productForm.cost_per_unit),
       category: productForm.category,
+      is_essential: productForm.is_essential,
       total_cost: parseInt(productForm.quantity) * parseFloat(productForm.cost_per_unit),
     };
 
@@ -160,7 +163,7 @@ export default function Dashboard() {
       
       if (!error) {
         setEditingId(null);
-        setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries' });
+        setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries', is_essential: false });
       }
     } else {
       await supabase
@@ -169,7 +172,7 @@ export default function Dashboard() {
     }
 
     if (!editingId) {
-      setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries' });
+      setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries', is_essential: false });
     }
     
     fetchProducts();
@@ -181,6 +184,7 @@ export default function Dashboard() {
       quantity: product.quantity.toString(),
       cost_per_unit: product.cost_per_unit.toString(),
       category: product.category,
+      is_essential: product.is_essential || false,
     });
     setEditingId(product.id);
   };
@@ -198,12 +202,19 @@ export default function Dashboard() {
   const totalExpenses = products.reduce((sum, p) => sum + (p.total_cost || 0), 0);
   const expectedExpenses = (parseFloat(monthlyIncome) || 0) - (parseFloat(expectedSavings) || 0);
   const remaining = (parseFloat(monthlyIncome) || 0) - totalExpenses;
-  const savingsDifference = (parseFloat(expectedSavings) || 0) - ((parseFloat(monthlyIncome) || 0) - totalExpenses);
+  
+  const essentialExpenses = products.filter(p => p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const nonEssentialExpenses = products.filter(p => !p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
 
   const categoryData = CATEGORIES.map(cat => ({
     name: cat,
     value: products.filter(p => p.category === cat).reduce((sum, p) => sum + (p.total_cost || 0), 0),
   })).filter(d => d.value > 0);
+
+  const essentialData = [
+    { name: 'Essential', value: essentialExpenses },
+    { name: 'Non-Essential', value: nonEssentialExpenses },
+  ].filter(d => d.value > 0);
 
   const productChartData = products.map(p => ({
     name: p.name.substring(0, 10),
@@ -293,7 +304,54 @@ export default function Dashboard() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <p className="text-text-secondary text-sm mb-1">Essential Expenses</p>
+                <p className="text-2xl font-bold text-blue-500">${essentialExpenses.toLocaleString()}</p>
+              </div>
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <p className="text-text-secondary text-sm mb-1">Non-Essential Expenses</p>
+                <p className="text-2xl font-bold text-orange-400">${nonEssentialExpenses.toLocaleString()}</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Essential vs Non-Essential</h3>
+                {essentialData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={essentialData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#3B82F6"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {essentialData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={ESSENTIAL_COLORS[index % ESSENTIAL_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#0F172A', 
+                          border: '1px solid #1E293B',
+                          borderRadius: '8px',
+                          color: '#F8FAFC'
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-text-muted">
+                    No expense data yet
+                  </div>
+                )}
+              </div>
+
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <h3 className="text-lg font-semibold text-text-primary mb-4">Expenses by Category</h3>
                 {categoryData.length > 0 ? (
@@ -330,7 +388,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6 lg:col-span-2">
                 <h3 className="text-lg font-semibold text-text-primary mb-4">Product Costs</h3>
                 {productChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -482,6 +540,27 @@ export default function Dashboard() {
                     />
                   </div>
                 </div>
+                
+                <div className="flex items-center justify-between p-4 bg-background border border-secondary rounded-xl">
+                  <div>
+                    <span className="font-medium text-text-primary">Essential Item</span>
+                    <p className="text-text-muted text-sm">Toggle if this is a necessary expense</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProductForm({ ...productForm, is_essential: !productForm.is_essential })}
+                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ${
+                      productForm.is_essential ? 'bg-blue-500' : 'bg-secondary'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform duration-200 ${
+                        productForm.is_essential ? 'translate-x-0' : '-translate-x-6'
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 <div className="flex gap-4">
                   <button
                     type="submit"
@@ -494,7 +573,7 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => {
                         setEditingId(null);
-                        setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries' });
+                        setProductForm({ name: '', quantity: '', cost_per_unit: '', category: 'Groceries', is_essential: false });
                       }}
                       className="px-6 py-3 bg-background border border-secondary text-text-primary font-semibold rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer"
                     >
@@ -518,6 +597,7 @@ export default function Dashboard() {
                       <tr className="border-b border-secondary">
                         <th className="text-left py-3 px-4 text-text-secondary font-medium">Product</th>
                         <th className="text-left py-3 px-4 text-text-secondary font-medium">Category</th>
+                        <th className="text-left py-3 px-4 text-text-secondary font-medium">Essential</th>
                         <th className="text-left py-3 px-4 text-text-secondary font-medium">Qty</th>
                         <th className="text-left py-3 px-4 text-text-secondary font-medium">Unit Cost</th>
                         <th className="text-left py-3 px-4 text-text-secondary font-medium">Total</th>
@@ -529,6 +609,15 @@ export default function Dashboard() {
                         <tr key={product.id} className="border-b border-secondary/50 hover:bg-secondary/20">
                           <td className="py-3 px-4 text-text-primary">{product.name}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.category}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              product.is_essential 
+                                ? 'bg-blue-500/20 text-blue-400' 
+                                : 'bg-orange-500/20 text-orange-400'
+                            }`}>
+                              {product.is_essential ? 'Essential' : 'Non-Essential'}
+                            </span>
+                          </td>
                           <td className="py-3 px-4 text-text-secondary">{product.quantity}</td>
                           <td className="py-3 px-4 text-text-secondary">${product.cost_per_unit}</td>
                           <td className="py-3 px-4 text-blue-500 font-medium">${product.total_cost}</td>
