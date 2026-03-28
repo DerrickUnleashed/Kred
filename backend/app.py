@@ -19,6 +19,11 @@ load_dotenv()
 
 app = FastAPI(title="KRED Stocks API", version="1.0.0")
 
+origins = [
+    "https://your-vercel-project-name.vercel.app",
+    "http://localhost:3000", # For local testing
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
