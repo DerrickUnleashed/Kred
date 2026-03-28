@@ -1,1 +1,5 @@
 .opencode/
+venv/
+__pycache__/
+*.pyc
+kred.db
