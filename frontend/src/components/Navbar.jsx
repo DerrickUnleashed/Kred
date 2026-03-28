@@ -20,7 +20,7 @@ export default function Navbar({ user, onLogout }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center">
               <img 
                 src={logo} 
                 alt="Company Logo" 
@@ -43,13 +43,13 @@ export default function Navbar({ user, onLogout }) {
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="relative group text-text-secondary hover:text-blue-500 transition-colors duration-200 cursor-pointer">
+              <a href="#features" className="relative group text-text-secondary hover:text-accent transition-colors duration-200 cursor-pointer">
                 Features
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-200"></span>
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-200"></span>
               </a>
-              <a href="#how-it-works" className="relative group text-text-secondary hover:text-blue-500 transition-colors duration-200 cursor-pointer">
+              <a href="#how-it-works" className="relative group text-text-secondary hover:text-accent transition-colors duration-200 cursor-pointer">
                 How It Works
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 group-hover:w-full transition-all duration-200"></span>
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-200"></span>
               </a>
               <Link to="/login" className="btn-secondary px-5 py-2.5 text-sm">Sign In</Link>
               <Link to="/register" className="btn-primary px-5 py-2.5 text-sm">Get Started</Link>

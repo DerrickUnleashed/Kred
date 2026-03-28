@@ -10,18 +10,39 @@ export default {
       colors: {
         primary: '#0F172A',
         secondary: '#1E293B',
-        cta: '#3B82F6',
+        cta: '#E5B74B',
         background: '#020617',
         surface: '#0F172A',
         'text-primary': '#FFFFFF',
-        'text-secondary': '#93C5FD',
-        'text-muted': '#60A5FA',
-        accent: '#3B82F6',
-        'accent-glow': 'rgba(59, 130, 246, 0.3)',
-        blue: {
-          400: '#60A5FA',
-          500: '#3B82F6',
+        'text-secondary': '#E5B74B',
+        'text-muted': '#D4A84A',
+        accent: {
+          DEFAULT: '#E5B74B',
+          50: '#F5EDD4',
+          100: '#F0E0B8',
+          200: '#EBD49D',
+          300: '#E5C881',
+          400: '#E5B74B',
+          500: '#D4A84A',
+          600: '#C49A3D',
+          700: '#A88134',
+          800: '#8D6A2C',
+          900: '#715524',
         },
+        'accent-glow': 'rgba(229, 183, 75, 0.3)',
+        blue: {
+          400: '#E5B74B',
+          500: '#D4A84A',
+        },
+      },
+      textColor: {
+        accent: '#E5B74B',
+      },
+      backgroundColor: {
+        accent: '#E5B74B',
+      },
+      borderColor: {
+        accent: '#E5B74B',
       },
       fontFamily: {
         sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
@@ -39,11 +60,11 @@ export default {
         },
         'pulse-glow': {
           '0%, 100%': { 
-            boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)', // Increased opacity
+            boxShadow: '0 0 20px rgba(229, 183, 75, 0.4)',
             filter: 'brightness(100%)' 
           },
           '50%': { 
-            boxShadow: '0 0 40px rgba(37, 99, 235, 0.7)', // Shifted to a deeper blue (blue-600)
+            boxShadow: '0 0 40px rgba(229, 183, 75, 0.7)',
             filter: 'brightness(120%)' 
           },
         },

@@ -25,7 +25,7 @@ export default function Pricing() {
             <ul className="space-y-3 mb-8">
               {['Budget tracking', 'Basic insights', '1 connected account', 'Email support'].map((feature, index) => (
                 <li key={index} className="flex items-center gap-3 text-text-secondary">
-                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {feature}
@@ -35,8 +35,8 @@ export default function Pricing() {
             <button className="btn-secondary w-full">Get Started</button>
           </div>
           
-          <div className="card border-blue-500 relative">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-500 text-white text-sm font-semibold rounded-full">
+          <div className="card border-accent relative">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-accent text-white text-sm font-semibold rounded-full">
               Most Popular
             </div>
             <div className="text-text-secondary text-sm font-medium mb-2">Pro</div>
@@ -47,7 +47,7 @@ export default function Pricing() {
             <ul className="space-y-3 mb-8">
               {['All Starter features', 'AI behavior analysis', 'Dynamic spending limits', 'Future self visualization', 'Priority support'].map((feature, index) => (
                 <li key={index} className="flex items-center gap-3 text-text-secondary">
-                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {feature}
@@ -66,7 +66,7 @@ export default function Pricing() {
             <ul className="space-y-3 mb-8">
               {['All Pro features', 'Stock analysis module', 'Unlimited accounts', 'Custom goals', 'Dedicated advisor', 'API access'].map((feature, index) => (
                 <li key={index} className="flex items-center gap-3 text-text-secondary">
-                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {feature}

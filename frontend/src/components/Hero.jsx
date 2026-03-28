@@ -11,15 +11,15 @@ export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center section-padding pt-32">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
       
       <div className="container-custom relative z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="text-center lg:text-left animate-fade-in">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface/50 border border-secondary rounded-full mb-8">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+              <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span>
               <span className="text-text-secondary text-sm">Behavioral Financial Platform</span>
             </div>
             
@@ -49,7 +49,7 @@ export default function Hero() {
             <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
                 <div key={index} className="animate-slide-up" style={{ animationDelay: `₹{index * 100}ms` }}>
-                  <div className="text-2xl sm:text-3xl font-bold text-blue-500">{stat.value}</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-accent">{stat.value}</div>
                   <div className="text-sm text-text-muted">{stat.label}</div>
                 </div>
               ))}
@@ -60,8 +60,8 @@ export default function Hero() {
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full blur-3xl"></div>
             <div className="relative h-full bg-surface/80 backdrop-blur-xl border border-secondary rounded-3xl p-6 lg:p-8 animate-float overflow-hidden">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                  <svg className="w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center">
+                  <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                   </svg>
                 </div>
@@ -74,7 +74,7 @@ export default function Hero() {
               <div className="space-y-4">
                 <div className="bg-secondary/50 rounded-xl p-4">
                   <div className="text-text-secondary text-sm mb-2">Today's Spending</div>
-                  <div className="text-3xl font-bold text-blue-500">₹516.47</div>
+                  <div className="text-3xl font-bold text-accent">₹516.47</div>
                   <div className="text-text-muted text-sm mt-1">Under limit by ₹100.53</div>
                 </div>
                 
