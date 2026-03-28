@@ -1,0 +1,15 @@
+# FastAPI + server
+fastapi
+uvicorn
+pydantic
+
+# AI / LLM
+groq
+huggingface_hub
+
+# Image
+Pillow
+numpy
+
+# Utility
+python-dotenv
