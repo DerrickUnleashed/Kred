@@ -10,8 +10,8 @@ SETUP:
 RUN:
     streamlit run indian_market_platform.py
 
-ENV (create .env file or set in environment):
-    GROQ_API_KEY=your_groq_api_key_here
+ENV (create .env file with):
+    GROQ_API_KEY=gsk_your_actual_api_key_here
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,6 +30,10 @@ import os
 import warnings
 import threading
 from typing import Optional, Dict, List, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 warnings.filterwarnings("ignore")
 
@@ -538,21 +542,25 @@ class IndianMarketAnalyzer:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# MODULE 2 — AI ANALYTICS ENGINE  (Groq / LangChain)
+# MODULE 2 — AI ANALYTICS ENGINE (Groq / LangChain) - API Key from .env only
 # ═════════════════════════════════════════════════════════════════════════════
 def _init_groq_llm():
-    """Lazy-init Groq LLM via LangChain. Returns (llm, error_msg)."""
+    """Initialize Groq LLM using API key from .env file only."""
     try:
         from langchain_groq import ChatGroq
-        api_key = (
-            os.getenv("GROQ_API_KEY")
-            or st.session_state.get("groq_api_key", "")
-        )
+        
+        # Get API key ONLY from environment (.env file)
+        api_key = os.getenv("GROQ_API_KEY")
+        
         if not api_key:
-            return None, "🔑 GROQ_API_KEY not set. Enter it in the sidebar."
+            return None, "🔑 GROQ_API_KEY not found in .env file. Please add GROQ_API_KEY=gsk_your_key to .env"
+        
+        if not api_key.startswith("gsk_"):
+            return None, "❌ Invalid API key format. Key should start with 'gsk_'"
+        
         llm = ChatGroq(
             groq_api_key=api_key,
-            model_name="qwen/qwen3-32b",
+            model_name="groq/compound-mini",
             temperature=0.4,
             max_tokens=1200,
         )
@@ -663,7 +671,6 @@ def init_session_state():
     defaults = {
         "risk_profile":  "Moderate",
         "username":      "Investor",
-        "groq_api_key":  "",
         "chat_history":  [],
         "last_refresh":  None,
         "market_ctx":    "",
@@ -718,23 +725,20 @@ def render_sidebar():
             key="sb_risk")
 
         st.markdown("---")
-        st.markdown("### 🔑 AI Config")
-        api_key_input = st.text_input(
-            "Groq API Key", type="password",
-            value=st.session_state["groq_api_key"],
-            placeholder="gsk_…", key="sb_apikey",
-            help="Get free key at console.groq.com")
-        if api_key_input:
-            st.session_state["groq_api_key"] = api_key_input
-            os.environ["GROQ_API_KEY"] = api_key_input
-
-        # connection status
-        if st.session_state["groq_api_key"]:
-            st.markdown('<span class="badge badge-green">✓ AI Connected</span>',
+        
+        # API Key Status (Read-only from .env)
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key and api_key.startswith("gsk_"):
+            st.markdown('<span class="badge badge-green">✓ AI Connected (from .env)</span>',
                         unsafe_allow_html=True)
         else:
-            st.markdown('<span class="badge badge-red">✗ AI Offline</span>',
+            st.markdown('<span class="badge badge-red">✗ AI Offline — Check .env file</span>',
                         unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background:#1f0e0e; border:1px solid #7f1d1d; border-radius:8px; padding:10px; margin-top:8px;">
+              <small style="color:#ef4444;">⚠️ Add GROQ_API_KEY=gsk_your_key to .env file</small>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("---")
         st.markdown("### ⚙️ Settings")
@@ -1204,7 +1208,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Tabs (Education removed) ───────────────────────────────────────────────────
+    # ── Tabs ───────────────────────────────────────────────────────────────────
     tabs = st.tabs([
         "🏛 Market Dashboard",
         "📊 Stock Analysis",
