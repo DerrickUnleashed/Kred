@@ -23,43 +23,43 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="section-padding relative">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-secondary to-transparent"></div>
-      </div>
+    <section id="how-it-works" className="section-padding relative overflow-hidden bg-background">
+      {/* Background Decorative Gradient Line */}
+      <div className="absolute top-[45%] left-0 w-full h-px bg-gradient-to-r from-transparent via-secondary/50 to-transparent hidden lg:block" />
       
-      <div className="container-custom">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface/50 border border-secondary rounded-full mb-6">
-            <span className="text-text-secondary text-sm">Simple Process</span>
+      <div className="container-custom relative z-10">
+        <div className="text-center mb-20 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface border border-secondary rounded-full mb-6">
+            <span className="text-blue-400 text-xs font-bold uppercase tracking-widest">The Process</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-text-primary mb-6">
-            How KRED{' '}
-            <span className="text-gradient">Transforms Your Finances</span>
+          <h2 className="text-4xl md:text-5xl font-bold text-text-primary mb-6 tracking-tight">
+            How KRED <span className="text-gradient">Transforms Finances</span>
           </h2>
           <p className="text-lg text-text-secondary max-w-2xl mx-auto">
-            Get started in minutes and start seeing results within days. No complex setup required.
+            A streamlined approach to managing your wealth. Simple, secure, and automated.
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-10">
           {steps.map((step, index) => (
-            <div key={index} className="relative">
-              <div className="text-7xl font-bold text-surface/50 absolute -top-4 -left-2 select-none">
-                {step.number}
+            <div key={index} className="group relative flex flex-col items-start">
+              
+              {/* Number Header - Fixed Height for perfect Title Alignment */}
+              <div className="relative mb-8 h-20 flex items-end">
+                <span className="text-7xl font-black text-secondary/40 transition-all duration-300 group-hover:text-blue-500/30 group-hover:-translate-y-1 select-none">
+                  {step.number}
+                </span>
               </div>
-              <div className="relative pt-8">
-                <h3 className="text-xl font-semibold text-text-primary mb-3">{step.title}</h3>
-                <p className="text-text-secondary">{step.description}</p>
+
+              {/* Content */}
+              <div className="relative">
+                <h3 className="text-xl font-bold text-text-primary mb-4 group-hover:text-blue-400 transition-colors">
+                  {step.title}
+                </h3>
+                <p className="text-text-secondary text-base leading-relaxed border-l-2 border-transparent group-hover:border-blue-500/50 pl-0 group-hover:pl-4 transition-all duration-300">
+                  {step.description}
+                </p>
               </div>
-              {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-16 right-0 translate-x-1/2 w-24">
-                  <svg className="w-full text-text-muted" viewBox="0 0 100 20" fill="none">
-                    <path d="M0 10H100" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    <path d="M95 5L100 10L95 15" stroke="currentColor" strokeWidth="2" fill="none" />
-                  </svg>
-                </div>
-              )}
             </div>
           ))}
         </div>

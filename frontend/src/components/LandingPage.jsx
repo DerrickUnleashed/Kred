@@ -12,7 +12,7 @@ export default function LandingPage() {
       <Navbar />
       <Hero />
       <Features />
-      <Pricing />
+      <HowItWorks />
       <CTA />
       <Footer />
     </div>
