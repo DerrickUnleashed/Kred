@@ -141,7 +141,7 @@ if st.button("Get Dynamic Limit"):
                 for key, value in data["explanation"].items():
                     st.write(f"**{key.capitalize()}**: {value}")
             else:
-                st.success("All factors look healthy ✅")
+                st.success("All factors look healthy ")
 
             st.divider()
 
@@ -150,7 +150,7 @@ if st.button("Get Dynamic Limit"):
             elif data["safe_spend_now"] < 100:
                 st.warning("⚠️ Low remaining spend. Be cautious.")
             else:
-                st.success("✅ You are within a safe spending range.")
+                st.success(" You are within a safe spending range.")
 
 
 # ===============================
@@ -191,7 +191,7 @@ if st.button("Analyze Behavior"):
                 st.write(f"- {insight}")
 
             # 🔹 Recommendations
-            st.subheader("💡 Recommendations")
+            st.subheader(" Recommendations")
             for rec in data["recommendations"]:
                 st.write(f"- {rec}")
 

@@ -44,7 +44,7 @@ CORE RULES:
 4. Tailor advice to the user's risk profile: conservative (FD mindset), moderate, aggressive.
 5. End every market insight with one actionable suggestion.
 6. Keep responses under 250 words unless asked for detail.
-7. Use emojis sparingly to highlight key points. 📊 💡 ⚠️
+7. Use emojis sparingly to highlight key points. 📊  ⚠️
 
 Risk profiles:
 - Conservative: prioritise capital safety, dividends, blue chips
@@ -260,7 +260,7 @@ There are {self.market_context.get('summary', {}).get('total_gainers', 0)} gaine
 🏭 SECTOR INSIGHTS
 The {self.market_context.get('top_sector', 'Banking')} sector is showing strength today. IT and Pharma sectors are worth watching for momentum.
 
-💡 FOR YOUR {risk_profile.upper()} RISK PROFILE
+ FOR YOUR {risk_profile.upper()} RISK PROFILE
 Consider focusing on quality large-caps with consistent earnings. Maintain a diversified portfolio across 4-5 sectors.
 
 🎯 ACTIONABLE TIP
@@ -290,7 +290,7 @@ Set price alerts for your watched stocks and review portfolio monthly.
 {signal}
 Volatility is {volatility:.1f}% — {'bumpy road' if volatility > 30 else 'smooth ride' if volatility < 15 else 'moderate conditions'}
 
-💡 KEY INSIGHT
+ KEY INSIGHT
 {outlook} For a {risk_profile.lower()} investor, this stock shows {'interesting potential' if rsi < 70 else 'cautionary signals'}.
 
 📈 SUGGESTED ACTION
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     ai = KredAIAnalytics()
     
     if ai.is_available():
-        print("\n✅ AI Engine initialized successfully with Groq LLM")
+        print("\n AI Engine initialized successfully with Groq LLM")
         
         # Test with mock market context
         test_context = {
@@ -377,4 +377,4 @@ if __name__ == "__main__":
         print("\n📊 Market Insight (Mock):")
         print(ai.generate_market_insight("Moderate"))
     
-    print("\n✅ Test completed successfully!")
+    print("\n Test completed successfully!")

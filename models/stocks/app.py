@@ -583,7 +583,7 @@ CORE RULES:
 4. Tailor advice to the user's risk profile: conservative (FD mindset), moderate, aggressive.
 5. End every market insight with one actionable suggestion.
 6. Keep responses under 250 words unless asked for detail.
-7. Use emojis sparingly to highlight key points. 📊 💡 ⚠️
+7. Use emojis sparingly to highlight key points. 📊  ⚠️
 
 Risk profiles:
 - Conservative: prioritise capital safety, dividends, blue chips
@@ -1059,7 +1059,7 @@ def tab_ai_insights(analyzer: IndianMarketAnalyzer):
     with col2:
         st.markdown("""
         <div class="edu-card">
-          <h4>💡 How to use AI Insights</h4>
+          <h4> How to use AI Insights</h4>
           <p style="color:#94a3b8;font-size:13px;">
             1. Click <b>Generate Market Insight</b> for a daily market overview.<br><br>
             2. Use <b>Quick Sector AI</b> to deep-dive any sector.<br><br>
@@ -1132,7 +1132,7 @@ def tab_chatbot():
                 </div>""", unsafe_allow_html=True)
 
     # Suggested questions
-    st.markdown("**💡 Quick questions:**")
+    st.markdown("** Quick questions:**")
     q_cols = st.columns(3)
     suggestions = [
         "What is RSI?",

@@ -500,4 +500,4 @@ if __name__ == "__main__":
     print(f"  Market Cap: {info.get('market_cap', 'N/A')}")
     print(f"  P/E Ratio: {info.get('pe_ratio', 'N/A')}")
     
-    print("\n✅ Test completed successfully!")
+    print("\n Test completed successfully!")

@@ -633,7 +633,7 @@ def main():
         )
         print_financial_report(base_summary, improved_summary)
 
-    print(f"  ✅ All images saved to: {OUTPUT_DIR.resolve()}")
+    print(f"   All images saved to: {OUTPUT_DIR.resolve()}")
     print(f"  Open the folder to view your future self visualizations.\n")
 
 

@@ -119,6 +119,138 @@ const computeDynamicLimit = (monthlyIncome, expectedSavings, products, totalExpe
   };
 };
 
+const computeBehaviorAnalysis = (monthlyIncome, expectedSavings, products, totalExpenses) => {
+  const income = parseFloat(monthlyIncome) || 0;
+  const savings = parseFloat(expectedSavings) || 0;
+  
+  const essentialExpenses = products.filter(p => p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const nonEssentialExpenses = products.filter(p => !p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const essentialCount = products.filter(p => p.is_essential).length;
+  const nonEssentialCount = products.filter(p => !p.is_essential).length;
+  
+  const impulsiveRatio = products.length > 0 ? nonEssentialCount / products.length : 0;
+  
+  const categorySpending = {};
+  products.forEach(p => {
+    if (!categorySpending[p.category]) {
+      categorySpending[p.category] = { count: 0, total: 0 };
+    }
+    categorySpending[p.category].count++;
+    categorySpending[p.category].total += p.total_cost || 0;
+  });
+  
+  const volatility = products.length > 1 
+    ? products.reduce((sum, p) => sum + Math.abs((p.total_cost || 0) - (totalExpenses / products.length)), 0) / products.length
+    : 0;
+  
+  const avgSpend = products.length > 0 ? totalExpenses / products.length : 0;
+  const overspendingFrequency = products.filter(p => (p.total_cost || 0) > avgSpend * 1.5).length;
+  
+  let score = 100;
+  
+  if (impulsiveRatio > 0.5) score -= 30;
+  else if (impulsiveRatio > 0.3) score -= 15;
+  
+  if (volatility > avgSpend * 0.5) score -= 20;
+  else if (volatility > avgSpend * 0.3) score -= 10;
+  
+  if (overspendingFrequency > products.length * 0.3) score -= 15;
+  
+  const savingsRatio = income > 0 ? savings / income : 0;
+  if (savingsRatio < 0.1) score -= 20;
+  else if (savingsRatio < 0.2) score -= 10;
+  
+  score = Math.max(0, Math.min(100, score));
+  
+  let riskLevel = 'low';
+  if (score < 40) riskLevel = 'high';
+  else if (score < 70) riskLevel = 'medium';
+  
+  let profile = 'disciplined';
+  if (impulsiveRatio > 0.5 && volatility > avgSpend * 0.3) profile = 'impulsive';
+  else if (impulsiveRatio > 0.3) profile = 'occasional_impulsive';
+  else if (savingsRatio >= 0.2) profile = 'saver';
+  else if (products.length === 0) profile = 'no_data';
+  
+  const insights = [];
+  const recommendations = [];
+  
+  if (profile === 'impulsive') {
+    insights.push('High ratio of non-essential purchases detected');
+    insights.push('Significant spending volatility observed');
+    recommendations.push('Try the 24-hour rule before non-essential purchases');
+    recommendations.push('Set stricter daily limits for discretionary spending');
+  }
+  
+  if (savingsRatio < 0.15) {
+    insights.push('Savings rate below recommended 20%');
+    recommendations.push('Consider automating savings right after income');
+  }
+  
+  if (nonEssentialExpenses > essentialExpenses * 0.5) {
+    insights.push('Non-essential spending is high compared to essentials');
+    recommendations.push('Prioritize essential purchases before discretionary items');
+  }
+  
+  if (products.length > 10) {
+    insights.push('High frequency of purchases recorded');
+    recommendations.push('Consider consolidating similar purchases');
+  }
+  
+  if (categorySpending['Entertainment']?.total > income * 0.1) {
+    insights.push('Entertainment spending exceeds 10% of income');
+    recommendations.push('Set a monthly entertainment budget');
+  }
+  
+  if (insights.length === 0) {
+    insights.push('Your spending patterns are well-balanced');
+    recommendations.push('Continue maintaining your current financial habits');
+  }
+  
+  const simulation = {
+    chart: products.slice(0, 10).map((p, i) => ({
+      date: `Day ${i + 1}`,
+      actual: p.total_cost || 0,
+      predicted: avgSpend,
+    })),
+    projection: {
+      current_spend_5y: Math.round(totalExpenses * 12 * 5),
+      improved_spend_5y: Math.round(totalExpenses * 0.8 * 12 * 5),
+      potential_savings: Math.round(totalExpenses * 0.2 * 12 * 5),
+      note: savingsRatio >= 0.2 
+        ? 'You are on track to meet your savings goals'
+        : 'Improving your spending habits could save significant amounts over 5 years',
+    },
+  };
+  
+  const patterns = {
+    overspending: {
+      frequency: overspendingFrequency,
+      volatility: Math.round(volatility),
+      avg_spend: Math.round(avgSpend),
+    },
+    categories: categorySpending,
+    trend: products.length >= 3 
+      ? (products[0].total_cost > products[products.length - 1].total_cost ? 'increasing' : 'decreasing')
+      : 'insufficient_data',
+  };
+  
+  return {
+    risk_level: riskLevel,
+    behavior_score: score,
+    behavior_profile: profile,
+    patterns,
+    insights,
+    recommendations,
+    simulation,
+    essential_count: essentialCount,
+    non_essential_count: nonEssentialCount,
+    essential_expenses: Math.round(essentialExpenses),
+    non_essential_expenses: Math.round(nonEssentialExpenses),
+    savings_ratio: (savingsRatio * 100).toFixed(0),
+  };
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -353,7 +485,7 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-wrap gap-2 mb-8">
-          {['overview', 'products', 'income', 'dynamic-limit'].map((tab) => (
+          {['overview', 'products', 'income', 'dynamic-limit', 'ai-behavior'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -882,7 +1014,7 @@ export default function Dashboard() {
                           insight.type === 'warning' ? 'text-yellow-400' :
                           'text-green-400'
                         }`}>
-                          {insight.type === 'error' ? '🚨' : insight.type === 'warning' ? '⚠️' : '✅'}
+                          {insight.type === 'error' ? '🚨' : insight.type === 'warning' ? '⚠️' : ''}
                         </span>
                         <p className={`text-sm ${
                           insight.type === 'error' ? 'text-red-300' :
@@ -924,6 +1056,236 @@ export default function Dashboard() {
                       <p className="text-xl font-bold text-orange-400">{limitData.impulsive_ratio}%</p>
                       <p className="text-text-muted text-xs">of purchases</p>
                     </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'ai-behavior' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(() => {
+                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Behavior Score</p>
+                      <div className="flex items-center gap-3">
+                        <p className={`text-4xl font-bold ${
+                          behaviorData.behavior_score >= 70 ? 'text-green-400' :
+                          behaviorData.behavior_score >= 40 ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {behaviorData.behavior_score}
+                        </p>
+                        <span className="text-text-muted">/ 100</span>
+                      </div>
+                    </div>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Risk Level</p>
+                      <span className={`inline-block px-4 py-2 text-lg font-semibold rounded-full ${
+                        behaviorData.risk_level === 'low' ? 'bg-green-500/20 text-green-400' :
+                        behaviorData.risk_level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {behaviorData.risk_level.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                      <p className="text-text-secondary text-sm mb-1">Behavior Profile</p>
+                      <p className="text-xl font-semibold text-blue-400 capitalize">
+                        {behaviorData.behavior_profile.replace('_', ' ')}
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Spending Behavior Chart</h3>
+              {(() => {
+                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                const chartData = behaviorData.simulation.chart || [];
+                return chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                      <XAxis dataKey="date" stroke="#94A3B8" />
+                      <YAxis stroke="#94A3B8" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#0F172A', 
+                          border: '1px solid #1E293B',
+                          borderRadius: '8px',
+                          color: '#F8FAFC'
+                        }}
+                      />
+                      <Bar dataKey="actual" fill="#3B82F6" name="Actual" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="predicted" fill="#60A5FA" name="Predicted Avg" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-text-muted">
+                    Add products to see spending behavior chart
+                  </div>
+                );
+              })()}
+              <p className="text-text-muted text-sm text-center mt-2">Actual vs Predicted Spending</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Spending Patterns</h3>
+                {(() => {
+                  const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                  const patterns = behaviorData.patterns;
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-background/50 rounded-xl p-4">
+                        <p className="text-text-secondary text-sm mb-2">Overspending Frequency</p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${
+                                patterns.overspending.frequency <= 2 ? 'bg-green-500' :
+                                patterns.overspending.frequency <= 4 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(patterns.overspending.frequency * 20, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-text-primary font-medium">{patterns.overspending.frequency} times</span>
+                        </div>
+                      </div>
+                      <div className="bg-background/50 rounded-xl p-4">
+                        <p className="text-text-secondary text-sm mb-2">Spending Volatility</p>
+                        <p className="text-xl font-bold text-blue-400">₹{patterns.overspending.volatility.toLocaleString()}</p>
+                        <p className="text-text-muted text-xs">Average deviation from mean</p>
+                      </div>
+                      <div className="bg-background/50 rounded-xl p-4">
+                        <p className="text-text-secondary text-sm mb-2">Spending Trend</p>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          patterns.trend === 'decreasing' ? 'bg-green-500/20 text-green-400' :
+                          patterns.trend === 'increasing' ? 'bg-red-500/20 text-red-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {patterns.trend === 'insufficient_data' ? 'Not enough data' : patterns.trend.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Essential vs Non-Essential</h3>
+                {(() => {
+                  const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                  const essentialData = [
+                    { name: 'Essential', value: behaviorData.essential_count, amount: behaviorData.essential_expenses },
+                    { name: 'Non-Essential', value: behaviorData.non_essential_count, amount: behaviorData.non_essential_expenses },
+                  ];
+                  return (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-blue-500/10 rounded-xl">
+                          <p className="text-2xl font-bold text-blue-400">{behaviorData.essential_count}</p>
+                          <p className="text-text-secondary text-sm">Essential Items</p>
+                          <p className="text-text-muted text-xs">₹{behaviorData.essential_expenses.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center p-4 bg-orange-500/10 rounded-xl">
+                          <p className="text-2xl font-bold text-orange-400">{behaviorData.non_essential_count}</p>
+                          <p className="text-text-secondary text-sm">Non-Essential Items</p>
+                          <p className="text-text-muted text-xs">₹{behaviorData.non_essential_expenses.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="bg-background/50 rounded-xl p-4">
+                        <p className="text-text-secondary text-sm mb-2">Savings Rate</p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${
+                                parseInt(behaviorData.savings_ratio) >= 20 ? 'bg-green-500' :
+                                parseInt(behaviorData.savings_ratio) >= 10 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(parseInt(behaviorData.savings_ratio) * 5, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-text-primary font-medium">{behaviorData.savings_ratio}%</span>
+                        </div>
+                        <p className="text-text-muted text-xs mt-2">
+                          {parseInt(behaviorData.savings_ratio) >= 20 ? 'On track for savings' :
+                           parseInt(behaviorData.savings_ratio) >= 10 ? 'Could improve savings rate' :
+                           'Focus on increasing savings'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Insights</h3>
+              {(() => {
+                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <div className="space-y-3">
+                    {behaviorData.insights.map((insight, index) => (
+                      <div key={index} className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-start gap-3">
+                        <span className="text-xl"></span>
+                        <p className="text-blue-300">{insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Recommendations</h3>
+              {(() => {
+                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                return (
+                  <div className="space-y-3">
+                    {behaviorData.recommendations.map((rec, index) => (
+                      <div key={index} className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-start gap-3">
+                        <span className="text-xl"></span>
+                        <p className="text-green-300">{rec}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">5-Year Future Projection</h3>
+              {(() => {
+                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
+                const projection = behaviorData.simulation.projection || {};
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-background/50 rounded-xl p-4 text-center">
+                        <p className="text-text-muted text-sm mb-1">Current 5Y Spend</p>
+                        <p className="text-xl font-bold text-red-400">₹{projection.current_spend_5y?.toLocaleString() || 0}</p>
+                      </div>
+                      <div className="bg-background/50 rounded-xl p-4 text-center">
+                        <p className="text-text-muted text-sm mb-1">Improved 5Y Spend</p>
+                        <p className="text-xl font-bold text-green-400">₹{projection.improved_spend_5y?.toLocaleString() || 0}</p>
+                      </div>
+                      <div className="bg-background/50 rounded-xl p-4 text-center">
+                        <p className="text-text-muted text-sm mb-1">Potential Savings</p>
+                        <p className="text-xl font-bold text-blue-400">₹{projection.potential_savings?.toLocaleString() || 0}</p>
+                      </div>
+                    </div>
+                    {projection.note && (
+                      <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                        <p className="text-blue-300 text-sm">{projection.note}</p>
+                      </div>
+                    )}
                   </div>
                 );
               })()}

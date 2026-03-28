@@ -25,7 +25,7 @@ import sys
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    print("✅ Environment variables loaded from .env file")
+    print(" Environment variables loaded from .env file")
 except ImportError:
     print("⚠️ python-dotenv not installed. Install: pip install python-dotenv")
 
@@ -201,7 +201,7 @@ class HuggingFaceImageGenerator:
             print("   Please set HF_TOKEN in your .env file or environment.")
             print("   Format: HF_TOKEN=hf_your_token_here\n")
         else:
-            print(f"✅ HF_TOKEN found (length: {len(self.hf_token)} characters)")
+            print(f" HF_TOKEN found (length: {len(self.hf_token)} characters)")
             
             if HF_AVAILABLE:
                 try:
@@ -209,7 +209,7 @@ class HuggingFaceImageGenerator:
                         provider="fal-ai",
                         api_key=self.hf_token
                     )
-                    print("✅ Hugging Face AI client initialized successfully!")
+                    print(" Hugging Face AI client initialized successfully!")
                 except Exception as e:
                     print(f"⚠️ Could not initialize Hugging Face client: {e}")
                     self.client = None
@@ -400,7 +400,7 @@ class HuggingFaceImageGenerator:
             f.write(f"  Wealth: Rs.{wealth:,.0f}\n")
             f.write(f"  {message}\n")
             f.write("=" * 60 + "\n")
-            f.write("\n  💡 TIP: To generate real AI images:\n")
+            f.write("\n   TIP: To generate real AI images:\n")
             f.write("     1. Get HF_TOKEN from huggingface.co/settings/tokens\n")
             f.write("     2. Add to .env file: HF_TOKEN=hf_your_token\n")
             f.write("     3. Run the script again\n")
@@ -459,7 +459,7 @@ class EmotionalAwarenessEngine:
             return f"🎉 {profile.name}, you're on the right track! Your future self will have Rs.{current_income:,.0f} monthly in retirement."
         
         if gap < 10_00_000:
-            return f"💡 {profile.name}, by saving just a little more each month, you could add Rs.{improved_income - current_income:,.0f} to your monthly retirement income."
+            return f" {profile.name}, by saving just a little more each month, you could add Rs.{improved_income - current_income:,.0f} to your monthly retirement income."
         
         if gap < 50_00_000:
             return f"🌟 {profile.name}, imagine having Rs.{improved_income:,.0f} every month instead of Rs.{current_income:,.0f}. Small steps matter!"
@@ -677,7 +677,7 @@ def main():
         print("    2. Go to: https://huggingface.co/settings/tokens")
         print("    3. Click 'New token' and copy it")
         print("    4. Add to .env file: HF_TOKEN=hf_your_token")
-        print("\n  💡 Without token, you'll get text-based visualization only.")
+        print("\n   Without token, you'll get text-based visualization only.")
         
         use_ai = input("\n  Continue without AI images? (y/n): ").strip().lower()
         if use_ai != 'y':
@@ -730,7 +730,7 @@ def main():
     
     # Show what-if scenarios
     print("\n" + "=" * 60)
-    print("  💡 WHAT IF YOU SAVED A LITTLE MORE?")
+    print("   WHAT IF YOU SAVED A LITTLE MORE?")
     print("=" * 60)
     
     for boost in [5, 10, 15, 20]:
@@ -765,7 +765,7 @@ def main():
         json.dump(report, f, indent=2, default=str, ensure_ascii=False)
     
     print("\n" + "=" * 60)
-    print("  ✅ COMPLETE! Your future self report is ready.")
+    print("   COMPLETE! Your future self report is ready.")
     print("  📁 Check these files:")
     print(f"     - {dashboard_path} (Your financial graph)")
     for img in generated_images[:5]:
