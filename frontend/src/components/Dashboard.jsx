@@ -270,7 +270,7 @@ export default function Dashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ${
+              className={`px-4 py-2 rounded-xl font-medium transition-colors cursor-pointer ₹{
                 activeTab === tab
                   ? 'bg-blue-500 text-white'
                   : 'bg-surface border border-secondary text-text-secondary hover:text-text-primary'
@@ -286,20 +286,20 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Monthly Income</p>
-                <p className="text-2xl font-bold text-blue-500">${parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-blue-500">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Expected Savings</p>
-                <p className="text-2xl font-bold text-green-400">${parseFloat(expectedSavings).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-green-400">₹{parseFloat(expectedSavings).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Expected Expense</p>
-                <p className="text-2xl font-bold text-yellow-400">${expectedExpenses.toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-yellow-400">₹{expectedExpenses.toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Remaining</p>
-                <p className={`text-2xl font-bold ${remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ${remaining.toLocaleString()}
+                <p className={`text-2xl font-bold ₹{remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ₹{remaining.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -307,11 +307,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Essential Expenses</p>
-                <p className="text-2xl font-bold text-blue-500">${essentialExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-blue-500">₹{essentialExpenses.toLocaleString()}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Non-Essential Expenses</p>
-                <p className="text-2xl font-bold text-orange-400">${nonEssentialExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-orange-400">₹{nonEssentialExpenses.toLocaleString()}</p>
               </div>
             </div>
 
@@ -328,11 +328,11 @@ export default function Dashboard() {
                         outerRadius={100}
                         fill="#3B82F6"
                         dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `₹{name}: ₹{(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {essentialData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={ESSENTIAL_COLORS[index % ESSENTIAL_COLORS.length]} />
+                          <Cell key={`cell-₹{index}`} fill={ESSENTIAL_COLORS[index % ESSENTIAL_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
@@ -364,11 +364,11 @@ export default function Dashboard() {
                         outerRadius={100}
                         fill="#3B82F6"
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `₹{name} ₹{(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-₹{index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip 
@@ -445,7 +445,7 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-text-secondary mb-2">Monthly Income ($)</label>
+                  <label className="block text-sm text-text-secondary mb-2">Monthly Income (₹)</label>
                   <input
                     type="number"
                     value={monthlyIncome}
@@ -455,7 +455,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-text-secondary mb-2">Expected Savings ($)</label>
+                  <label className="block text-sm text-text-secondary mb-2">Expected Savings (₹)</label>
                   <input
                     type="number"
                     value={expectedSavings}
@@ -468,7 +468,7 @@ export default function Dashboard() {
               <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                 <p className="text-text-secondary text-sm">
                   <span className="text-blue-500 font-medium">Expected Expense:</span> 
-                  <span className="text-text-primary font-semibold ml-2">${expectedExpenses.toLocaleString()}</span>
+                  <span className="text-text-primary font-semibold ml-2">₹{expectedExpenses.toLocaleString()}</span>
                   <span className="text-text-muted text-xs ml-2">(Income - Savings)</span>
                 </p>
               </div>
@@ -527,7 +527,7 @@ export default function Dashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit ($)</label>
+                    <label className="block text-sm text-text-secondary mb-2">Cost per Unit (₹)</label>
                     <input
                       type="number"
                       value={productForm.cost_per_unit}
@@ -549,12 +549,12 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setProductForm({ ...productForm, is_essential: !productForm.is_essential })}
-                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ${
+                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 cursor-pointer ₹{
                       productForm.is_essential ? 'bg-blue-500' : 'bg-secondary'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform duration-200 ${
+                      className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-transform duration-200 ₹{
                         productForm.is_essential ? 'translate-x-0' : '-translate-x-6'
                       }`}
                     />
@@ -610,7 +610,7 @@ export default function Dashboard() {
                           <td className="py-3 px-4 text-text-primary">{product.name}</td>
                           <td className="py-3 px-4 text-text-secondary">{product.category}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ₹{
                               product.is_essential 
                                 ? 'bg-blue-500/20 text-blue-400' 
                                 : 'bg-orange-500/20 text-orange-400'
@@ -619,8 +619,8 @@ export default function Dashboard() {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-text-secondary">{product.quantity}</td>
-                          <td className="py-3 px-4 text-text-secondary">${product.cost_per_unit}</td>
-                          <td className="py-3 px-4 text-blue-500 font-medium">${product.total_cost}</td>
+                          <td className="py-3 px-4 text-text-secondary">₹{product.cost_per_unit}</td>
+                          <td className="py-3 px-4 text-blue-500 font-medium">₹{product.total_cost}</td>
                           <td className="py-3 px-4">
                             <div className="flex gap-2">
                               <button
