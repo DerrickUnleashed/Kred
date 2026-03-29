@@ -5,6 +5,7 @@ import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import Stocks from './components/Stocks';
 import FutureSimulator from './components/FutureSimulator';
+import AIBehavior from './components/AIBehavior';
 import Reels from './components/Reels';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/stocks" element={<Stocks />} />
         <Route path="/fsve" element={<FutureSimulator />} />
+        <Route path="/ai-behavior" element={<AIBehavior />} />
         <Route path="/reels" element={<Reels />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

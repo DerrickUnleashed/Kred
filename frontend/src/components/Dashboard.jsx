@@ -635,7 +635,7 @@ export default function Dashboard() {
       <Navbar user={user} onLogout={handleLogout} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
         <div className="flex flex-wrap gap-2 mb-8">
-          {['overview', 'products', 'income', 'provident-fund', 'dynamic-limit', 'ai-behavior'].map((tab) => (
+          {['overview', 'products', 'income', 'provident-fund', 'dynamic-limit'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -648,6 +648,12 @@ export default function Dashboard() {
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          <Link
+            to="/ai-behavior"
+            className="px-4 py-2 rounded-xl font-medium bg-gradient-to-r from-accent to-orange-500 text-white hover:opacity-90 transition-opacity"
+          >
+            AI Behavior
+          </Link>
           <Link
             to="/stocks"
             className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-accent hover:border-accent transition-colors"
@@ -1363,236 +1369,6 @@ export default function Dashboard() {
                       <p className="text-xl font-bold text-orange-400">{limitData.impulsive_ratio}%</p>
                       <p className="text-text-muted text-xs">of purchases</p>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'ai-behavior' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(() => {
-                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                return (
-                  <>
-                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                      <p className="text-text-secondary text-sm mb-1">Behavior Score</p>
-                      <div className="flex items-center gap-3">
-                        <p className={`text-4xl font-bold ${
-                          behaviorData.behavior_score >= 70 ? 'text-green-400' :
-                          behaviorData.behavior_score >= 40 ? 'text-yellow-400' : 'text-red-400'
-                        }`}>
-                          {behaviorData.behavior_score}
-                        </p>
-                        <span className="text-text-muted">/ 100</span>
-                      </div>
-                    </div>
-                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                      <p className="text-text-secondary text-sm mb-1">Risk Level</p>
-                      <span className={`inline-block px-4 py-2 text-lg font-semibold rounded-full ${
-                        behaviorData.risk_level === 'low' ? 'bg-green-500/20 text-green-400' :
-                        behaviorData.risk_level === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>
-                        {behaviorData.risk_level.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                      <p className="text-text-secondary text-sm mb-1">Behavior Profile</p>
-                      <p className="text-xl font-semibold text-accent capitalize">
-                        {behaviorData.behavior_profile.replace('_', ' ')}
-                      </p>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">Spending Behavior Chart</h3>
-              {(() => {
-                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                const chartData = behaviorData.simulation.chart || [];
-                return chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
-                      <XAxis dataKey="date" stroke="#94A3B8" />
-                      <YAxis stroke="#94A3B8" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#0F172A', 
-                          border: '1px solid #1E293B',
-                          borderRadius: '8px',
-                          color: '#F8FAFC'
-                        }}
-                      />
-                      <Bar dataKey="actual" fill="#3B82F6" name="Actual" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="predicted" fill="#E5B74B" name="Predicted Avg" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-text-muted">
-                    Add products to see spending behavior chart
-                  </div>
-                );
-              })()}
-              <p className="text-text-muted text-sm text-center mt-2">Actual vs Predicted Spending</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Spending Patterns</h3>
-                {(() => {
-                  const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                  const patterns = behaviorData.patterns;
-                  return (
-                    <div className="space-y-4">
-                      <div className="bg-background/50 rounded-xl p-4">
-                        <p className="text-text-secondary text-sm mb-2">Overspending Frequency</p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full ${
-                                patterns.overspending.frequency <= 2 ? 'bg-green-500' :
-                                patterns.overspending.frequency <= 4 ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(patterns.overspending.frequency * 20, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-text-primary font-medium">{patterns.overspending.frequency} times</span>
-                        </div>
-                      </div>
-                      <div className="bg-background/50 rounded-xl p-4">
-                        <p className="text-text-secondary text-sm mb-2">Spending Volatility</p>
-                        <p className="text-xl font-bold text-accent">₹{patterns.overspending.volatility.toLocaleString()}</p>
-                        <p className="text-text-muted text-xs">Average deviation from mean</p>
-                      </div>
-                      <div className="bg-background/50 rounded-xl p-4">
-                        <p className="text-text-secondary text-sm mb-2">Spending Trend</p>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          patterns.trend === 'decreasing' ? 'bg-green-500/20 text-green-400' :
-                          patterns.trend === 'increasing' ? 'bg-red-500/20 text-red-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {patterns.trend === 'insufficient_data' ? 'Not enough data' : patterns.trend.toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-text-primary mb-4">Essential vs Non-Essential</h3>
-                {(() => {
-                  const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                  const essentialData = [
-                    { name: 'Essential', value: behaviorData.essential_count, amount: behaviorData.essential_expenses },
-                    { name: 'Non-Essential', value: behaviorData.non_essential_count, amount: behaviorData.non_essential_expenses },
-                  ];
-                  return (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 bg-accent/10 rounded-xl">
-                          <p className="text-2xl font-bold text-accent">{behaviorData.essential_count}</p>
-                          <p className="text-text-secondary text-sm">Essential Items</p>
-                          <p className="text-text-muted text-xs">₹{behaviorData.essential_expenses.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center p-4 bg-orange-500/10 rounded-xl">
-                          <p className="text-2xl font-bold text-orange-400">{behaviorData.non_essential_count}</p>
-                          <p className="text-text-secondary text-sm">Non-Essential Items</p>
-                          <p className="text-text-muted text-xs">₹{behaviorData.non_essential_expenses.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="bg-background/50 rounded-xl p-4">
-                        <p className="text-text-secondary text-sm mb-2">Savings Rate</p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full ${
-                                parseInt(behaviorData.savings_ratio) >= 20 ? 'bg-green-500' :
-                                parseInt(behaviorData.savings_ratio) >= 10 ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(parseInt(behaviorData.savings_ratio) * 5, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-text-primary font-medium">{behaviorData.savings_ratio}%</span>
-                        </div>
-                        <p className="text-text-muted text-xs mt-2">
-                          {parseInt(behaviorData.savings_ratio) >= 20 ? 'On track for savings' :
-                           parseInt(behaviorData.savings_ratio) >= 10 ? 'Could improve savings rate' :
-                           'Focus on increasing savings'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-
-            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">Insights</h3>
-              {(() => {
-                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                return (
-                  <div className="space-y-3">
-                    {behaviorData.insights.map((insight, index) => (
-                      <div key={index} className="p-4 bg-accent/10 border border-accent/30 rounded-xl flex items-start gap-3">
-                        <span className="text-xl"></span>
-                        <p className="text-accent">{insight}</p>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">Recommendations</h3>
-              {(() => {
-                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                return (
-                  <div className="space-y-3">
-                    {behaviorData.recommendations.map((rec, index) => (
-                      <div key={index} className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl flex items-start gap-3">
-                        <span className="text-xl"></span>
-                        <p className="text-green-300">{rec}</p>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">5-Year Future Projection</h3>
-              {(() => {
-                const behaviorData = computeBehaviorAnalysis(monthlyIncome, expectedSavings, products, totalExpenses);
-                const projection = behaviorData.simulation.projection || {};
-                return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-background/50 rounded-xl p-4 text-center">
-                        <p className="text-text-muted text-sm mb-1">Current 5Y Spend</p>
-                        <p className="text-xl font-bold text-red-400">₹{projection.current_spend_5y?.toLocaleString() || 0}</p>
-                      </div>
-                      <div className="bg-background/50 rounded-xl p-4 text-center">
-                        <p className="text-text-muted text-sm mb-1">Improved 5Y Spend</p>
-                        <p className="text-xl font-bold text-green-400">₹{projection.improved_spend_5y?.toLocaleString() || 0}</p>
-                      </div>
-                      <div className="bg-background/50 rounded-xl p-4 text-center">
-                        <p className="text-text-muted text-sm mb-1">Potential Savings</p>
-                        <p className="text-xl font-bold text-accent">₹{projection.potential_savings?.toLocaleString() || 0}</p>
-                      </div>
-                    </div>
-                    {projection.note && (
-                      <div className="p-4 bg-accent/10 border border-accent/30 rounded-xl">
-                        <p className="text-accent text-sm">{projection.note}</p>
-                      </div>
-                    )}
                   </div>
                 );
               })()}
