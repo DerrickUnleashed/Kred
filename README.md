@@ -51,7 +51,8 @@ Explore the complete project, live demo, and pitch:
 
 🔗 **PPT**: [Click Here](https://docs.google.com/presentation/d/160gLE1GIUt3D2saIO7HdB4uaYYA1cxga/edit?usp=sharing&ouid=112083637467050535240&rtpof=true&sd=true)  
 
-🎥 **Demo Video**: [Click Here](https://your-demo-video-link.com)
+🎥 <b>Demo Video</b>: <a href="https://www.youtube.com/watch?v=DeGk33Qy6JM" target="_blank">Click Here</a>
+
 
 > This includes the live application, full walkthrough, and presentation covering the problem, solution, core features, innovations, and system design of KRED.
 
