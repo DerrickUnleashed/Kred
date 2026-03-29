@@ -12,7 +12,7 @@ Instead of simply tracking expenses, KRED analyzes **how you think, spend, learn
 
 Explore the complete project walkthrough and pitch:
 
-🔗 **PPT: https://docs.google.com/presentation/d/160gLE1GIUt3D2saIO7HdB4uaYYA1cxga/edit?usp=sharing&ouid=112083637467050535240&rtpof=true&sd=true
+🔗 **PPT**: https://docs.google.com/presentation/d/160gLE1GIUt3D2saIO7HdB4uaYYA1cxga/edit?usp=sharing&ouid=112083637467050535240&rtpof=true&sd=true
 
 > This presentation covers the problem, solution, core features, innovations, and system design of KRED.
 
