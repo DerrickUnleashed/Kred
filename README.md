@@ -1,8 +1,8 @@
-# 🧠 KRED — AI-Powered Life & Financial Intelligence Engine
+# KRED — AI-Powered Life & Financial Intelligence Engine
 
 > **See your future. Quantify your decisions. Change your trajectory.**
 
-# ⚠️ Problem Statement
+# Problem Statement
 
 ## Retirement Blindness Among Gen Z
 
@@ -33,7 +33,86 @@ Instead of simply tracking expenses, KRED analyzes **how you think, spend, learn
 
 ---
 
-# 📊 Presentation & Demo
+# Project Setup Instructions
+
+## 1. Clone the Project
+
+```bash
+git clone https://github.com/DerrickUnleashed/Kred.git
+cd Kred
+```
+
+## 2. Backend Setup
+
+```bash
+cd backend
+```
+
+* Create a `.env` file based on `.env.example`
+
+### Create Virtual Environment**
+
+**Linux / macOS**
+
+```bash
+python3 -m venv venv
+```
+
+**Windows**
+
+```bash
+python -m venv venv
+```
+
+### Activate Virtual Environment
+
+**Linux / macOS**
+
+```bash
+source venv/bin/activate
+```
+
+**Windows**
+
+```bash
+venv\Scripts\activate
+```
+
+### Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run Backend
+
+```bash
+uvicorn app:app
+```
+
+## 3. Frontend Setup
+
+```bash
+cd ../frontend
+```
+
+* Create a `.env` file based on `.env.example`
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run Frontend
+
+```bash
+npm run dev
+```
+
+---
+
+# Presentation & Demo
 
 Explore the complete project walkthrough and pitch:
 
@@ -43,7 +122,7 @@ Explore the complete project walkthrough and pitch:
 
 ---
 
-# 🚀 Core Features
+# Core Features
 
 ## 1. AI Behavioral Analysis Engine
 
@@ -115,7 +194,7 @@ Refines predictions and recommendations to become more accurate and personalized
 
 ---
 
-# 🌟 Novel Contributions
+# Novel Contributions
 
 KRED introduces a new class of intelligent systems:
 
@@ -127,7 +206,7 @@ KRED introduces a new class of intelligent systems:
 
 ---
 
-# 🔐 User Authentication
+# User Authentication
 
 - Supabase-powered authentication  
 - Secure login & registration  
@@ -136,7 +215,7 @@ KRED introduces a new class of intelligent systems:
 
 ---
 
-# 🏗️ Tech Stack
+# Tech Stack
 
 ## Frontend
 - React 19  
@@ -167,7 +246,7 @@ KRED introduces a new class of intelligent systems:
 
 ---
 
-# 📂 Project Structure
+# Project Structure
 
 ```
 .
