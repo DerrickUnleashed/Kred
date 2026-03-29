@@ -7,9 +7,7 @@
 ## Retirement Blindness Among Gen Z
 
 Today’s generation is highly focused on short-term financial needs, lifestyle upgrades, and immediate gratification — often at the cost of long-term financial security.
-
 Retirement, being distant and abstract, is largely ignored or postponed. Most individuals lack the financial literacy and awareness required to understand the importance of early investing and compounding.
-
 As a result, there exists a critical gap between **knowing** and **acting**.
 
 This leads to:
@@ -17,8 +15,6 @@ This leads to:
 - Weak financial habits  
 - Loss of compounding advantages  
 - Increased risk of financial insecurity in later life  
-
-The core challenge is not just lack of tools — but the lack of **systems that make the future feel real, measurable, and urgent**.
 
 ---
 
