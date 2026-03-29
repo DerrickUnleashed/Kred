@@ -47,7 +47,7 @@ Instead of simply tracking expenses, KRED analyzes **how you think, spend, learn
 
 Explore the complete project, live demo, and pitch:
 
-🔗 **Live Deployment**: [Click Here](kred-steel.vercel.app)
+🔗 <b>Live Deployment</b>: <a href="https://kred-steel.vercel.app" target="_blank">Click Here</a>
 
 🔗 **PPT**: [Click Here](https://docs.google.com/presentation/d/160gLE1GIUt3D2saIO7HdB4uaYYA1cxga/edit?usp=sharing&ouid=112083637467050535240&rtpof=true&sd=true)  
 
