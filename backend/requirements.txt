@@ -5,3 +5,6 @@ pandas
 numpy
 python-dotenv
 groq
+pydantic
+huggingface_hub
+Pillow

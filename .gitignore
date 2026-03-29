@@ -4,4 +4,6 @@ __pycache__/
 *.pyc
 kred.db
 .env
-backend/stocks_api/.env
+backend/.env
+backend/output/
+backend/models/

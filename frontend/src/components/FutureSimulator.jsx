@@ -164,7 +164,6 @@ export default function FutureSimulator() {
       health: profile.health,
       sleep: profile.sleep,
       results: simulationResults,
-      updated_at: new Date().toISOString(),
     };
 
     const { data: existing } = await supabase
@@ -179,7 +178,6 @@ export default function FutureSimulator() {
         .update(simulationData)
         .eq('user_id', user.id);
     } else {
-      simulationData.created_at = new Date().toISOString();
       await supabase
         .from('fsve_simulations')
         .insert([simulationData]);
