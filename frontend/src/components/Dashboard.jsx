@@ -660,6 +660,12 @@ export default function Dashboard() {
           >
             Simulate
           </Link>
+          <Link
+            to="/reels"
+            className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-accent hover:border-accent transition-colors"
+          >
+            Videos
+          </Link>
         </div>
 
         {activeTab === 'overview' && (
