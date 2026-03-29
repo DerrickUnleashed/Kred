@@ -1,16 +1,12 @@
-# app.py - Place in C:\Users\Asus\Documents\GitHub\Kred\models\
+# app.py - Streamlit with exact input format from main.py
 import streamlit as st
 import requests
 import json
-from datetime import datetime
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-import pandas as pd
-from PIL import Image
-import io
-import base64
+from datetime import datetime
 
-# Page configuration
 st.set_page_config(
     page_title="KRED - Future Life Simulator",
     page_icon="🔮",
@@ -18,58 +14,37 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for the exact style from the image
+# Custom CSS
 st.markdown("""
 <style>
-    /* Main background */
     .stApp {
         background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
     }
-    
-    /* Title styling */
     .main-title {
-        font-size: 4rem;
+        font-size: 3.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6347 100%);
+        background: linear-gradient(135deg, #FFD700, #FFA500, #FF6347);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
         margin-bottom: 0;
-        letter-spacing: -0.02em;
     }
-    
     .subtitle {
         text-align: center;
         color: #888;
-        font-size: 1.1rem;
-        margin-top: -10px;
-        margin-bottom: 40px;
+        margin-bottom: 30px;
     }
-    
-    /* Card styling */
-    .card {
-        background: rgba(20, 20, 40, 0.7);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        padding: 20px;
-        border: 1px solid rgba(255, 215, 0, 0.2);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    
-    /* Score cards */
     .score-card {
-        background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,100,0,0.05) 100%);
+        background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,100,0,0.05));
         border-radius: 15px;
-        padding: 15px;
+        padding: 20px;
         text-align: center;
         border: 1px solid rgba(255,215,0,0.3);
         transition: transform 0.3s;
     }
-    
     .score-card:hover {
         transform: translateY(-5px);
     }
-    
     .score-value {
         font-size: 2.5rem;
         font-weight: bold;
@@ -77,424 +52,476 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    
-    .score-label {
-        color: #aaa;
-        font-size: 0.85rem;
-        margin-top: 5px;
-    }
-    
-    /* Metric boxes */
     .metric-box {
         background: rgba(0,0,0,0.5);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 3px solid #FFD700;
+    }
+    .risk-low { color: #00ff88; font-weight: bold; }
+    .risk-moderate { color: #ffaa00; font-weight: bold; }
+    .risk-high { color: #ff4444; font-weight: bold; }
+    .insight-box {
+        background: rgba(255,215,0,0.1);
         border-radius: 10px;
         padding: 12px;
         margin: 8px 0;
         border-left: 3px solid #FFD700;
     }
-    
-    /* Button styling */
-    .stButton > button {
-        background: linear-gradient(135deg, #FFD700, #FFA500);
-        color: #000;
-        font-weight: bold;
-        font-size: 1.1rem;
-        padding: 12px 30px;
-        border-radius: 30px;
-        border: none;
-        transition: all 0.3s;
-        width: 100%;
-    }
-    
-    .stButton > button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 5px 20px rgba(255,215,0,0.3);
-    }
-    
-    /* Tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-        background-color: transparent;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: rgba(30,30,50,0.8);
-        border-radius: 10px;
-        padding: 10px 20px;
-        color: #ccc;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #FFD700, #FFA500);
-        color: #000;
-    }
-    
-    /* Header styling */
-    .header-logo {
-        font-size: 2rem;
-        font-weight: bold;
-        background: linear-gradient(135deg, #FFD700, #FFA500);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    /* Risk indicators */
-    .risk-low {
-        color: #00ff88;
-        font-weight: bold;
-    }
-    .risk-moderate {
-        color: #ffaa00;
-        font-weight: bold;
-    }
-    .risk-high {
-        color: #ff4444;
-        font-weight: bold;
-    }
-    
-    /* Divider */
-    .custom-divider {
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #FFD700, transparent);
-        margin: 30px 0;
-    }
-    
-    /* Footer */
-    .footer {
-        text-align: center;
-        color: #666;
-        font-size: 0.8rem;
-        margin-top: 50px;
-        padding: 20px;
-        border-top: 1px solid rgba(255,215,0,0.1);
-    }
-    
-    /* Input fields */
-    .stTextInput > div > div > input, .stNumberInput > div > div > input {
-        background-color: rgba(30,30,50,0.8);
-        border-color: rgba(255,215,0,0.3);
-        color: white;
-    }
-    
-    .stSelectbox > div > div {
-        background-color: rgba(30,30,50,0.8);
-        color: white;
-    }
-    
-    label {
-        color: #FFD700 !important;
-        font-weight: 500;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state
-if 'analyzed' not in st.session_state:
-    st.session_state.analyzed = False
-if 'results' not in st.session_state:
-    st.session_state.results = None
-
 # Header
-col1, col2, col3 = st.columns([1,2,1])
-with col2:
-    st.markdown('<h1 class="main-title">🔮 FUTURE LIFE SIMULATOR</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">AI-Powered Life Trajectory Engine · FLUX + GROQ</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">🔮 KRED - FUTURE LIFE SIMULATOR</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">AI-Powered Financial Behavior Intelligence System</p>', unsafe_allow_html=True)
 
-st.markdown("""
-<p style="text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 40px;">
-    Your academic, financial, career, and lifestyle inputs are scored and projected 5, 10, and 25 years ahead.<br>
-    AI generates photorealistic visualizations of exactly what your lifestyle environment will look like.
-</p>
-""", unsafe_allow_html=True)
+# Initialize session state for default values
+if 'user_data' not in st.session_state:
+    st.session_state.user_data = {
+        "Full Name": "Default Student",
+        "Age": 21,
+        "Gender": "Male",
+        "Country": "India",
+        "Education Level": "Undergraduate",
+        "Field of Study": "Computer Science",
+        "Institution Tier": 2,
+        "CGPA": 7.5,
+        "Study Hours": 20,
+        "Target Career": "Software Developer",
+        "Skill Level": "Intermediate",
+        "Internships": 1,
+        "Consistency": 5,
+        "Monthly Income": 15000,
+        "Fixed Expenses": 8000,
+        "Variable Expenses": 4000,
+        "Weekly Spending": 2000,
+        "Current Savings": 25000,
+        "Savings Target": 50000,
+        "Savings Duration": 12,
+        "Family Income": 60000,
+        "Earning Members": 2,
+        "Dependents": 3,
+        "Father Occupation": "Private Job",
+        "Mother Occupation": "Homemaker",
+        "Family Support": 5000,
+        "Family Responsibility": 2000,
+        "Screen Time": 6,
+        "Sleep Duration": 6.5,
+        "Sleep Quality": 6,
+        "Health Score": 6,
+        "Sick Days": 2,
+        "Medical Expenses": 1000
+    }
 
-st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-# Main input form
-with st.container():
-    st.markdown("### 📊 ENTER YOUR PROFILE")
+# Sidebar for inputs
+with st.sidebar:
+    st.markdown("## 📝 Student Profile")
     
-    col1, col2 = st.columns(2)
+    with st.expander("👤 Personal Info", expanded=True):
+        name = st.text_input("Full Name", st.session_state.user_data["Full Name"])
+        age = st.number_input("Age", 18, 80, st.session_state.user_data["Age"])
+        gender = st.selectbox("Gender", ["Male", "Female", "Other"], 
+                              index=["Male", "Female", "Other"].index(st.session_state.user_data["Gender"]))
+        country = st.text_input("Country", st.session_state.user_data["Country"])
     
-    with col1:
-        st.markdown("#### 👤 Personal & Academic")
-        age = st.number_input("Age", min_value=18, max_value=80, value=21, step=1)
-        country = st.selectbox("Country", ["India", "USA", "UK", "Canada", "Australia", "Other"])
-        edu_level = st.selectbox("Education Level", ["Undergraduate", "High School", "Postgraduate", "PhD"])
-        field = st.selectbox("Field of Study", [
-            "Engineering / Technology", "Computer Science", "Medicine / Healthcare",
-            "Commerce / Business", "Arts / Humanities", "Law", "Science", "Other"
-        ])
-        college_tier = st.selectbox("College Tier", ["Tier 1", "Tier 2", "Tier 3"])
-        cgpa = st.slider("CGPA/GPA", 0.0, 10.0, 7.5, 0.1)
-        study_hours = st.slider("Study Hours per Week", 0, 60, 20)
-        
-    with col2:
-        st.markdown("#### 💰 Financial & Lifestyle")
-        monthly_spend = st.number_input("Monthly Spend (₹)", min_value=0, value=18000, step=1000)
-        skill = st.select_slider("Skill Level", options=["Beginner", "Intermediate", "Advanced"], value="Intermediate")
-        consistency = st.select_slider("Consistency", options=["Low", "Medium", "High"], value="Medium")
-        discipline = st.select_slider("Spending Discipline", options=["Impulsive", "Balanced", "Disciplined"], value="Balanced")
-        savings = st.select_slider("Savings Habit", options=["Low", "Medium", "High"], value="Medium")
-        health = st.select_slider("Health Status", options=["Poor", "Average", "Good"], value="Average")
-        sleep = st.select_slider("Sleep Quality", options=["Poor", "Average", "Good"], value="Average")
-        
-    # Advanced options
-    with st.expander("🔧 Advanced Options"):
-        col1, col2 = st.columns(2)
-        with col1:
-            screen_time = st.selectbox("Screen Time", ["Low (<2 hrs)", "Medium (4-6 hrs)", "High (>8 hrs)"], index=1)
-            experience = st.checkbox("Has Internship/Work Experience")
-        with col2:
-            family_bg = st.selectbox("Family Background", ["Low", "Middle", "High"], index=1)
-            target_career = st.text_input("Target Career", "Software Engineer")
+    with st.expander("🎓 Academic Info", expanded=True):
+        edu_level = st.selectbox("Education Level", 
+                                 ["Undergraduate", "High School", "Postgraduate", "PhD"],
+                                 index=["Undergraduate", "High School", "Postgraduate", "PhD"].index(st.session_state.user_data["Education Level"]))
+        field = st.text_input("Field of Study", st.session_state.user_data["Field of Study"])
+        institution_tier = st.selectbox("Institution Tier", [1, 2, 3], 
+                                        index=[1, 2, 3].index(st.session_state.user_data["Institution Tier"]))
+        cgpa = st.slider("CGPA", 0.0, 10.0, st.session_state.user_data["CGPA"], 0.1)
+        study_hours = st.slider("Study Hours/Week", 0, 60, st.session_state.user_data["Study Hours"])
+        target_career = st.text_input("Target Career", st.session_state.user_data["Target Career"])
+        skill_level = st.select_slider("Skill Level", ["Beginner", "Intermediate", "Advanced"], value=st.session_state.user_data["Skill Level"])
+        internships = st.number_input("Internships", 0, 5, st.session_state.user_data["Internships"])
+        consistency = st.slider("Consistency (0-10)", 0, 10, st.session_state.user_data["Consistency"])
     
-    # Analyze button
-    st.markdown("<br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        analyze_clicked = st.button("🚀 ANALYZE MY FUTURE", use_container_width=True)
+    with st.expander("💰 Financial Data", expanded=True):
+        monthly_income = st.number_input("Monthly Income (₹)", 0, 200000, st.session_state.user_data["Monthly Income"])
+        fixed_expenses = st.number_input("Fixed Expenses (₹)", 0, 100000, st.session_state.user_data["Fixed Expenses"])
+        variable_expenses = st.number_input("Variable Expenses (₹)", 0, 100000, st.session_state.user_data["Variable Expenses"])
+        weekly_spending = st.number_input("Weekly Spending (₹)", 0, 50000, st.session_state.user_data["Weekly Spending"])
+        current_savings = st.number_input("Current Savings (₹)", 0, 1000000, st.session_state.user_data["Current Savings"])
+        savings_target = st.number_input("Savings Target (₹)", 0, 1000000, st.session_state.user_data["Savings Target"])
+        savings_duration = st.number_input("Savings Duration (Months)", 1, 60, st.session_state.user_data["Savings Duration"])
+    
+    with st.expander("👨‍👩‍👧 Family Background", expanded=True):
+        family_income = st.number_input("Family Income (₹)", 0, 500000, st.session_state.user_data["Family Income"])
+        earning_members = st.number_input("Earning Members", 0, 10, st.session_state.user_data["Earning Members"])
+        dependents = st.number_input("Dependents", 0, 10, st.session_state.user_data["Dependents"])
+        father_occ = st.text_input("Father Occupation", st.session_state.user_data["Father Occupation"])
+        mother_occ = st.text_input("Mother Occupation", st.session_state.user_data["Mother Occupation"])
+        family_support = st.number_input("Family Support (₹)", 0, 50000, st.session_state.user_data["Family Support"])
+        family_responsibility = st.number_input("Family Responsibility (₹)", 0, 50000, st.session_state.user_data["Family Responsibility"])
+    
+    with st.expander("❤️ Lifestyle & Health", expanded=True):
+        screen_time = st.slider("Screen Time (Hours)", 0.0, 24.0, st.session_state.user_data["Screen Time"], 0.5)
+        sleep_duration = st.slider("Sleep Duration (Hours)", 0.0, 12.0, st.session_state.user_data["Sleep Duration"], 0.5)
+        sleep_quality = st.slider("Sleep Quality (0-10)", 0, 10, st.session_state.user_data["Sleep Quality"])
+        health_score = st.slider("Health Score (0-10)", 0, 10, st.session_state.user_data["Health Score"])
+        sick_days = st.number_input("Sick Days (per month)", 0, 30, st.session_state.user_data["Sick Days"])
+        medical_expenses = st.number_input("Medical Expenses (₹)", 0, 50000, st.session_state.user_data["Medical Expenses"])
+    
+    analyze_btn = st.button("🚀 ANALYZE MY FUTURE", use_container_width=True)
 
-# API call and analysis
-if analyze_clicked:
-    with st.spinner("🔮 Analyzing your future trajectory..."):
+# Main content area
+if analyze_btn:
+    with st.spinner("🔮 AI is analyzing your financial future..."):
         try:
-            # Prepare payload
+            # Prepare payload in the exact format
             payload = {
-                "age": age,
-                "country": country,
-                "edu_level": edu_level,
-                "field": field,
-                "college_tier": college_tier,
-                "cgpa": cgpa,
-                "study_hours": study_hours,
-                "target_career": target_career,
-                "skill": skill,
-                "experience": experience,
-                "consistency": consistency,
-                "monthly_spend": monthly_spend,
-                "savings": savings,
-                "family_bg": family_bg,
-                "discipline": discipline,
-                "screen_time": screen_time,
-                "health": health,
-                "sleep": sleep,
-                "generate_images": False
+                "Full Name": name,
+                "Age": age,
+                "Gender": gender,
+                "Country": country,
+                "Education Level": edu_level,
+                "Field of Study": field,
+                "Institution Tier": institution_tier,
+                "CGPA": cgpa,
+                "Study Hours": study_hours,
+                "Target Career": target_career,
+                "Skill Level": skill_level,
+                "Internships": internships,
+                "Consistency": consistency,
+                "Monthly Income": monthly_income,
+                "Fixed Expenses": fixed_expenses,
+                "Variable Expenses": variable_expenses,
+                "Weekly Spending": weekly_spending,
+                "Current Savings": current_savings,
+                "Savings Target": savings_target,
+                "Savings Duration": savings_duration,
+                "Family Income": family_income,
+                "Earning Members": earning_members,
+                "Dependents": dependents,
+                "Father Occupation": father_occ,
+                "Mother Occupation": mother_occ,
+                "Family Support": family_support,
+                "Family Responsibility": family_responsibility,
+                "Screen Time": screen_time,
+                "Sleep Duration": sleep_duration,
+                "Sleep Quality": sleep_quality,
+                "Health Score": health_score,
+                "Sick Days": sick_days,
+                "Medical Expenses": medical_expenses
             }
             
-            # Call API
-            response = requests.post(
-                "http://localhost:8000/analyze",
-                json=payload,
-                timeout=60
-            )
+            # Call the API
+            response = requests.post("http://localhost:8000/analyze", json=payload, timeout=60)
             
             if response.status_code == 200:
-                st.session_state.results = response.json()
-                st.session_state.analyzed = True
-                st.rerun()
+                result = response.json()
+                
+                # Display results
+                st.success("✅ Analysis Complete!")
+                
+                # ============================================================
+                # SECTION 1: SUMMARY
+                # ============================================================
+                st.markdown("## 📋 Executive Summary")
+                st.markdown(f"""
+                <div class="metric-box">
+                    {result.get('summary', 'No summary available')}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 2: KEY METRICS (4x4 Grid)
+                # ============================================================
+                st.markdown("## 📊 Key Metrics Dashboard")
+                
+                scores = result.get('scores', {})
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    rr = scores.get('retirement_readiness', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{rr.get('value', 0)}</div>
+                        <div>Retirement Readiness</div>
+                        <small style="color:#888;">{rr.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    sd = scores.get('savings_discipline_score', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{sd.get('value', 0)}</div>
+                        <div>Savings Discipline</div>
+                        <small style="color:#888;">{sd.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    fb = scores.get('financial_burn_rate_indicator', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{fb.get('value', 0)}</div>
+                        <div>Burn Rate Indicator</div>
+                        <small style="color:#888;">{fb.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col4:
+                    lr = scores.get('lifestyle_risk_index', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{lr.get('value', 0)}</div>
+                        <div>Lifestyle Risk Index</div>
+                        <small style="color:#888;">{lr.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Second row of metrics
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    cg = scores.get('career_growth_potential_score', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{cg.get('value', 0)}</div>
+                        <div>Career Growth</div>
+                        <small style="color:#888;">{cg.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    fd = scores.get('financial_dependency_ratio', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{fd.get('value', 0)}</div>
+                        <div>Dependency Ratio</div>
+                        <small style="color:#888;">{fd.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    wa = scores.get('wealth_acceleration_potential', {})
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{wa.get('value', 0)}</div>
+                        <div>Wealth Acceleration</div>
+                        <small style="color:#888;">{wa.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col4:
+                    iu = scores.get('intervention_urgency_level', {})
+                    urgency_color = "🔴" if iu.get('value', 0) > 70 else "🟡" if iu.get('value', 0) > 40 else "🟢"
+                    st.markdown(f"""
+                    <div class="score-card">
+                        <div class="score-value">{urgency_color} {iu.get('value', 0)}</div>
+                        <div>Intervention Urgency</div>
+                        <small style="color:#888;">{iu.get('reason', '')[:40]}...</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 3: FUTURE PROJECTIONS
+                # ============================================================
+                st.markdown("## 🔮 Future Projections")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    fp = result.get('future_projection', {})
+                    st.markdown(f"""
+                    <div class="metric-box">
+                        <strong>📈 Qualitative:</strong> {fp.get('qualitative', 'N/A')}<br>
+                        <strong>💰 Numeric:</strong> {fp.get('numeric', 'N/A')}<br>
+                        <strong>⚠️ Retirement Delay Risk:</strong> <span class="risk-high">{result.get('retirement_delay_risk', 'N/A')}</span><br>
+                        <strong>🏠 Future Lifestyle:</strong> <span class="risk-{result.get('future_lifestyle_tier', 'At Risk').lower().replace(' ', '-')}">{result.get('future_lifestyle_tier', 'N/A')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    # Create a gauge chart for retirement readiness
+                    rr_value = scores.get('retirement_readiness', {}).get('value', 0)
+                    fig = go.Figure(go.Indicator(
+                        mode="gauge+number",
+                        value=rr_value,
+                        title={'text': "Retirement Readiness", 'font': {'color': 'white'}},
+                        gauge={
+                            'axis': {'range': [0, 100], 'tickcolor': 'white'},
+                            'bar': {'color': "#FFD700"},
+                            'steps': [
+                                {'range': [0, 33], 'color': "#ff4444"},
+                                {'range': [33, 66], 'color': "#ffaa00"},
+                                {'range': [66, 100], 'color': "#00ff88"}
+                            ],
+                            'threshold': {'line': {'color': "white", 'width': 4}, 'thickness': 0.75, 'value': rr_value}
+                        },
+                        number={'font': {'color': 'white', 'size': 50}}
+                    ))
+                    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', height=250)
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # ============================================================
+                # SECTION 4: LIFEPATH ANALYSIS (Current vs Optimized)
+                # ============================================================
+                st.markdown("## 🛤️ LifePath Analysis")
+                
+                lp = result.get('lifepath_analysis', {})
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### 📉 Current Behavior Path")
+                    current = lp.get('current_behavior', {})
+                    st.markdown(f"""
+                    <div class="metric-box">
+                        <strong>💰 Wealth:</strong> {current.get('wealth', 'N/A')}<br>
+                        <strong>📈 Career Growth:</strong> {current.get('career_growth', 'N/A')}<br>
+                        <strong>🏦 Financial Stability:</strong> {current.get('financial_stability', 'N/A')}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("### 📈 Optimized Behavior Path")
+                    optimized = lp.get('optimized_behavior', {})
+                    st.markdown(f"""
+                    <div class="metric-box" style="border-left-color: #00ff88;">
+                        <strong>💰 Wealth:</strong> {optimized.get('wealth', 'N/A')}<br>
+                        <strong>📈 Career Growth:</strong> {optimized.get('career_growth', 'N/A')}<br>
+                        <strong>🏦 Financial Stability:</strong> {optimized.get('financial_stability', 'N/A')}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 5: MICRO-REGRET INSIGHTS
+                # ============================================================
+                st.markdown("## 😰 Micro-Regret Insights")
+                
+                micro_regrets = result.get('micro_regret', [])
+                for regret in micro_regrets:
+                    st.markdown(f"""
+                    <div class="insight-box">
+                        ⚠️ {regret}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 6: OPPORTUNITY COST & BEHAVIORAL PROFILE
+                # ============================================================
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("### 💸 Opportunity Cost Analysis")
+                    opp_costs = result.get('opportunity_cost', [])
+                    for cost in opp_costs:
+                        st.markdown(f"""
+                        <div class="metric-box">
+                            📉 {cost}
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown("### 🧠 Behavioral Profile")
+                    profile = result.get('behavior_profile', 'Unknown')
+                    profile_color = "🔴" if profile == "Impulsive" else "🟡" if profile == "Moderate" else "🟢"
+                    st.markdown(f"""
+                    <div class="metric-box">
+                        <strong>{profile_color} {profile}</strong><br>
+                        <small>{'Needs immediate intervention' if profile == 'Impulsive' else 'Balanced approach needed' if profile == 'Moderate' else 'Good habits, maintain momentum'}</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("### 🏥 Health → Wealth Impact")
+                    health_impact = result.get('health_impact', 'N/A')
+                    st.markdown(f"""
+                    <div class="metric-box">
+                        {health_impact}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 7: PEER COMPARISON
+                # ============================================================
+                st.markdown("## 👥 Peer Comparison (Gen Z Context)")
+                peer = result.get('peer_comparison', 'Average')
+                peer_icon = "🏆" if peer == "Above Average" else "📊" if peer == "Average" else "⚠️"
+                st.markdown(f"""
+                <div class="metric-box" style="text-align: center;">
+                    <h2>{peer_icon} {peer}</h2>
+                    <small>Compared to similar Gen Z students</small>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 8: RECOMMENDATIONS
+                # ============================================================
+                st.markdown("## 🎯 Actionable Recommendations")
+                
+                recommendations = result.get('recommendations', [])
+                for i, rec in enumerate(recommendations, 1):
+                    st.markdown(f"""
+                    <div class="insight-box">
+                        <strong>{i}.</strong> {rec}
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # SECTION 9: FINAL INSIGHT
+                # ============================================================
+                st.markdown("## 💡 Final Insight")
+                st.markdown(f"""
+                <div class="metric-box" style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,100,0,0.1)); text-align: center;">
+                    <em>“{result.get('final_statement', 'No final statement available')}”</em>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # ============================================================
+                # EXPORT OPTION
+                # ============================================================
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1,2,1])
+                with col2:
+                    if st.button("📥 Download Full Report (JSON)", use_container_width=True):
+                        report_data = {
+                            "user_input": payload,
+                            "analysis_results": result,
+                            "generated_at": datetime.now().isoformat()
+                        }
+                        st.download_button(
+                            label="Click to Download",
+                            data=json.dumps(report_data, indent=2),
+                            file_name=f"kred_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                            mime="application/json"
+                        )
+                
             else:
                 st.error(f"API Error: {response.status_code} - {response.text}")
                 
         except requests.exceptions.ConnectionError:
-            st.error("❌ Cannot connect to API. Please run: python server.py")
+            st.error("❌ Cannot connect to API. Please run: python working_api.py")
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
-# Display results
-if st.session_state.analyzed and st.session_state.results:
-    results = st.session_state.results
-    
-    if results.get("status") == "success":
-        
-        # Hero Score Section
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        composite = results.get("composite_score", 0)
-        risk = results.get("risk_level", "unknown")
-        risk_class = f"risk-{risk}" if risk in ["low", "moderate", "high"] else ""
-        
-        with col1:
-            st.markdown(f"""
-            <div class="score-card">
-                <div class="score-value">{composite:.0f}</div>
-                <div class="score-label">COMPOSITE SCORE</div>
-                <div class="score-label" style="font-size:0.7rem">/100</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="score-card">
-                <div class="score-value">{results.get("behavior_score", 0)}</div>
-                <div class="score-label">BEHAVIOR SCORE</div>
-                <div class="score-label" style="font-size:0.7rem">Financial Discipline</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div class="score-card">
-                <div class="score-value">{results.get("regret_score", 0)}</div>
-                <div class="score-label">REGRET SCORE</div>
-                <div class="score-label" style="font-size:0.7rem">Future Impact</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            urgency = results.get("urgency_level", "Low")
-            urgency_color = {"Critical": "#ff4444", "High": "#ffaa00", "Moderate": "#ffdd00", "Low": "#00ff88"}.get(urgency, "#fff")
-            st.markdown(f"""
-            <div class="score-card">
-                <div class="score-value" style="color:{urgency_color}">{urgency}</div>
-                <div class="score-label">URGENCY LEVEL</div>
-                <div class="score-label" style="font-size:0.7rem">Action Required</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Risk indicator
-        risk_display = {"low": "🟢 LOW RISK", "moderate": "🟡 MODERATE RISK", "high": "🔴 HIGH RISK"}.get(risk, "⚪ UNKNOWN")
-        st.markdown(f"""
-        <div style="text-align: center; margin: 20px 0;">
-            <span style="font-size: 1.2rem;">Risk Assessment: </span>
-            <span class="risk-{risk}" style="font-size: 1.2rem;">{risk_display}</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Tabs for detailed analysis
-        tab1, tab2, tab3, tab4 = st.tabs(["📈 FUTURE PROJECTION", "💡 INSIGHTS", "📊 DETAILED SCORES", "🔮 REGRET ANALYSIS"])
-        
-        with tab1:
-            st.markdown("### 🚀 Your Life Trajectory")
-            
-            # Create radar chart for future scores
-            if results.get("details", {}).get("future_scores"):
-                scores_data = results["details"]["future_scores"]
-                categories = list(scores_data.keys())
-                values = list(scores_data.values())
-                
-                fig = go.Figure(data=go.Scatterpolar(
-                    r=values,
-                    theta=categories,
-                    fill='toself',
-                    line_color='#FFD700',
-                    fillcolor='rgba(255,215,0,0.2)'
-                ))
-                fig.update_layout(
-                    polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 100], color='#888'),
-                        angularaxis=dict(color='#888')
-                    ),
-                    showlegend=False,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-            # Recommendations
-            st.markdown("### 🎯 Priority Actions")
-            recommendations = results.get("details", {}).get("recommendations", [])
-            if recommendations:
-                for i, rec in enumerate(recommendations[:5], 1):
-                    st.markdown(f"""
-                    <div class="metric-box">
-                        <strong>{i}.</strong> {rec}
-                    </div>
-                    """, unsafe_allow_html=True)
-        
-        with tab2:
-            st.markdown("### 💡 AI-Generated Insights")
-            insights = results.get("details", {}).get("insights", [])
-            if insights:
-                for insight in insights:
-                    st.info(f"💭 {insight}")
-            
-            st.markdown("### 🛡️ Redemption Path")
-            redemption = results.get("details", {}).get("redemption_path", "")
-            if redemption:
-                st.success(f"🌟 {redemption}")
-        
-        with tab3:
-            st.markdown("### 📊 Domain Scores")
-            
-            col1, col2 = st.columns(2)
-            scores_data = results.get("details", {}).get("future_scores", {})
-            
-            if scores_data:
-                df = pd.DataFrame({
-                    "Domain": list(scores_data.keys()),
-                    "Score": list(scores_data.values())
-                })
-                
-                fig = px.bar(df, x="Domain", y="Score", color="Score",
-                            color_continuous_scale=["#ff4444", "#ffaa00", "#00ff88"],
-                            range_color=[0, 100])
-                fig.update_layout(
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    font_color='#fff',
-                    height=400
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            
-            st.markdown("### 📋 Profile Summary")
-            st.markdown(f"""
-            <div class="metric-box">
-                <strong>Behavior Profile:</strong> {results.get('behavior_profile', 'N/A')}<br>
-                <strong>Risk Level:</strong> <span class="risk-{risk}">{risk.upper()}</span><br>
-                <strong>Composite Score:</strong> {composite:.1f}/100
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with tab4:
-            st.markdown("### 😰 Regret Analysis")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown(f"""
-                <div class="card">
-                    <h4>5-Year Projection</h4>
-                    <p>{results.get('details', {}).get('five_year_regret', 'No data')[:200]}...</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                st.markdown(f"""
-                <div class="card">
-                    <h4>10-Year Projection</h4>
-                    <p>{results.get('details', {}).get('ten_year_regret', 'No data')[:200]}...</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("### 🔮 Trajectory Metaphor")
-            metaphor = results.get("details", {}).get("trajectory_metaphor", "")
-            if metaphor:
-                st.markdown(f"""
-                <div class="card" style="background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,100,0,0.05));">
-                    <p style="font-size: 1.1rem; font-style: italic;">“{metaphor}”</p>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        # Footer
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="footer">
-            <p>⚡ Powered by GROQ (Qwen-32B) + FLUX.1-schnell</p>
-            <p>KRED — AI-Powered Financial Behavior Intelligence System</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    else:
-        st.error(f"Analysis failed: {results.get('error', 'Unknown error')}")
-
-# Instructions if no API running
-elif not analyze_clicked:
+else:
+    # Welcome screen
     st.markdown("""
-    <div style="text-align: center; padding: 40px; background: rgba(20,20,40,0.5); border-radius: 20px; margin-top: 30px;">
-        <h3 style="color: #FFD700;">✨ Ready to See Your Future?</h3>
-        <p style="color: #aaa;">Fill in your details above and click "ANALYZE MY FUTURE"</p>
-        <p style="color: #666; font-size: 0.85rem;">Make sure the API server is running: <code>python server.py</code></p>
+    <div style="text-align: center; padding: 60px;">
+        <h2 style="color: #FFD700;">✨ Welcome to KRED</h2>
+        <p style="color: #aaa; font-size: 1.1rem;">Your AI-powered financial behavior intelligence system</p>
+        <p style="color: #666;">Fill in your details in the sidebar and click "ANALYZE MY FUTURE"</p>
+        <br>
+        <div style="background: rgba(255,215,0,0.1); border-radius: 15px; padding: 20px; margin-top: 20px;">
+            <h3 style="color: #FFD700;">🔍 What KRED Analyzes</h3>
+            <table style="width: 100%; color: #aaa;">
+                <tr><td>📊 Retirement Readiness</td><td>💰 Savings Discipline</td></tr>
+                <tr><td>📈 Career Growth Potential</td><td>🏥 Health → Wealth Impact</td></tr>
+                <tr><td>😰 Future Regret Projections</td><td>🎯 Personalized Recommendations</td></tr>
+            </table>
+        </div>
     </div>
     """, unsafe_allow_html=True)
+
+# Footer
+st.markdown("""
+<div style="text-align: center; color: #666; padding: 20px; margin-top: 30px; border-top: 1px solid rgba(255,215,0,0.1);">
+    <p>⚡ Powered by GROQ (Qwen-32B) | KRED — AI-Powered Financial Behavior Intelligence System</p>
+    <p style="font-size: 0.8rem;">Solving "Retirement Blindness" among Gen Z students</p>
+</div>
+""", unsafe_allow_html=True)

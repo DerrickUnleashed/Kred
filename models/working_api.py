@@ -33,26 +33,42 @@ def get_pipeline():
     return _pipeline
 
 # Request/Response Models
+# Add this new request model to working_api.py
 class UserProfileRequest(BaseModel):
-    age: int = Field(21, ge=18, le=80)
-    country: str = "India"
-    edu_level: str = "Undergraduate"
-    field: str = "Engineering / Technology"
-    college_tier: str = "Tier 2"
-    cgpa: float = Field(7.5, ge=0, le=10)
-    study_hours: float = 20.0
-    target_career: str = ""
-    skill: str = "Intermediate"
-    experience: bool = False
-    consistency: str = "Medium"
-    monthly_spend: float = Field(10000, ge=0)
-    savings: str = "Medium"
-    family_bg: str = "Middle"
-    discipline: str = "Balanced"
-    screen_time: str = "Medium (4-6 hrs)"
-    health: str = "Average"
-    sleep: str = "Average"
-    generate_images: bool = False
+    # Match exact fields from main.py
+    Full_Name: str = "Default Student"
+    Age: int = 21
+    Gender: str = "Male"
+    Country: str = "India"
+    Education_Level: str = "Undergraduate"
+    Field_of_Study: str = "Computer Science"
+    Institution_Tier: int = 2
+    CGPA: float = 7.5
+    Study_Hours: int = 20
+    Target_Career: str = "Software Developer"
+    Skill_Level: str = "Intermediate"
+    Internships: int = 1
+    Consistency: int = 5
+    Monthly_Income: float = 15000
+    Fixed_Expenses: float = 8000
+    Variable_Expenses: float = 4000
+    Weekly_Spending: float = 2000
+    Current_Savings: float = 25000
+    Savings_Target: float = 50000
+    Savings_Duration: int = 12
+    Family_Income: float = 60000
+    Earning_Members: int = 2
+    Dependents: int = 3
+    Father_Occupation: str = "Private Job"
+    Mother_Occupation: str = "Homemaker"
+    Family_Support: float = 5000
+    Family_Responsibility: float = 2000
+    Screen_Time: float = 6
+    Sleep_Duration: float = 6.5
+    Sleep_Quality: int = 6
+    Health_Score: int = 6
+    Sick_Days: int = 2
+    Medical_Expenses: float = 1000
 
 class AnalysisResponse(BaseModel):
     status: str
