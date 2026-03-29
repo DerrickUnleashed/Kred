@@ -650,7 +650,7 @@ export default function Dashboard() {
           ))}
           <Link
             to="/ai-behavior"
-            className="px-4 py-2 rounded-xl font-medium bg-gradient-to-r from-accent to-orange-500 text-white hover:opacity-90 transition-opacity"
+            className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-accent hover:border-accent transition-colors"
           >
             AI Behavior
           </Link>
