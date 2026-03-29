@@ -263,6 +263,14 @@ export default function Dashboard() {
   const [expectedSavings, setExpectedSavings] = useState('');
   const [incomeLoading, setIncomeLoading] = useState(false);
   
+  // PF state
+  const [pfLoading, setPfLoading] = useState(false);
+  const [pfData, setPfData] = useState({
+    monthlyPf: '',
+    companyPf: '',
+    interestRate: '8.25',
+  });
+  
   // Products state
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -303,6 +311,7 @@ export default function Dashboard() {
     if (user) {
       fetchIncome();
       fetchProducts();
+      fetchPfData();
     }
   }, [user]);
 
@@ -361,6 +370,88 @@ export default function Dashboard() {
     }
     
     setIncomeLoading(false);
+  };
+
+  const fetchPfData = async () => {
+    const { data } = await supabase
+      .from('user_income')
+      .select('monthly_pf, company_pf, pf_interest_rate')
+      .eq('user_id', user?.id)
+      .single();
+    
+    if (data) {
+      setPfData({
+        monthlyPf: data.monthly_pf || '',
+        companyPf: data.company_pf || '',
+        interestRate: data.pf_interest_rate || '8.25',
+      });
+    }
+  };
+
+  const savePfData = async () => {
+    setPfLoading(true);
+    
+    const { data: existing } = await supabase
+      .from('user_income')
+      .select('id')
+      .eq('user_id', user?.id)
+      .single();
+
+    if (existing) {
+      await supabase
+        .from('user_income')
+        .update({ 
+          monthly_pf: parseFloat(pfData.monthlyPf) || 0,
+          company_pf: parseFloat(pfData.companyPf) || 0,
+          pf_interest_rate: parseFloat(pfData.interestRate) || 8.25,
+        })
+        .eq('user_id', user?.id);
+    } else {
+      await supabase
+        .from('user_income')
+        .insert([{ 
+          user_id: user?.id, 
+          monthly_income: monthlyIncome,
+          expected_savings: expectedSavings,
+          monthly_pf: parseFloat(pfData.monthlyPf) || 0,
+          company_pf: parseFloat(pfData.companyPf) || 0,
+          pf_interest_rate: parseFloat(pfData.interestRate) || 8.25,
+        }]);
+    }
+    
+    setPfLoading(false);
+  };
+
+  const calculatePfMaturity = () => {
+    const monthlyContribution = parseFloat(pfData.monthlyPf) || 0;
+    const companyContribution = parseFloat(pfData.companyPf) || 0;
+    const annualRate = parseFloat(pfData.interestRate) || 8.25;
+    const monthlyRate = annualRate / 100 / 12;
+
+    const totalMonthly = monthlyContribution + companyContribution;
+    
+    const years = [5, 10, 20, 30, 40, 50, 60];
+    
+    return years.map(year => {
+      const months = year * 12;
+      let totalContributions = totalMonthly * months;
+      
+      let futureValue = 0;
+      if (monthlyRate > 0) {
+        futureValue = totalMonthly * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
+      } else {
+        futureValue = totalContributions;
+      }
+      
+      const interestEarned = futureValue - totalContributions;
+      
+      return {
+        years: year,
+        totalContributions: Math.round(totalContributions),
+        interestEarned: Math.round(interestEarned),
+        maturityValue: Math.round(futureValue),
+      };
+    });
   };
 
   const handleProductSubmit = async (e) => {
@@ -496,21 +587,35 @@ export default function Dashboard() {
   }));
 
   const calculateMonthlyExpenses = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const income = parseFloat(monthlyIncome) || 0;
     
-    return months.map(month => {
-      const monthExpenses = products
-        .filter(p => getMonthName(p.created_at) === month)
-        .reduce((sum, p) => sum + (p.total_cost || 0), 0);
+    const monthlyMap = {};
+    
+    products.forEach(p => {
+      const d = new Date(p.created_at);
+      const year = d.getFullYear();
+      const month = getMonthName(p.created_at);
+      const key = `${year}-${month}`;
+      const label = `${month} ${year.toString().slice(-2)}`;
       
-      return {
-        month,
-        income,
-        expected: expectedExpenses,
-        actual: monthExpenses,
-      };
-    }).filter(m => m.actual > 0);
+      if (!monthlyMap[key]) {
+        monthlyMap[key] = {
+          month: label,
+          year,
+          monthIndex: d.getMonth(),
+          income,
+          expected: expectedExpenses,
+          actual: 0,
+        };
+      }
+      monthlyMap[key].actual += p.total_cost || 0;
+    });
+    
+    return Object.values(monthlyMap)
+      .sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.monthIndex - b.monthIndex;
+      });
   };
 
   const monthlyData = calculateMonthlyExpenses();
@@ -528,7 +633,7 @@ export default function Dashboard() {
       <Navbar user={user} onLogout={handleLogout} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
         <div className="flex flex-wrap gap-2 mb-8">
-          {['overview', 'products', 'income', 'dynamic-limit', 'ai-behavior'].map((tab) => (
+          {['overview', 'products', 'income', 'provident-fund', 'dynamic-limit', 'ai-behavior'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -934,6 +1039,128 @@ export default function Dashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'provident-fund' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <h2 className="text-xl font-semibold text-text-primary mb-6">Provident Fund Calculator</h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Your Monthly PF Contribution (₹)</label>
+                    <input
+                      type="number"
+                      value={pfData.monthlyPf}
+                      onChange={(e) => setPfData({...pfData, monthlyPf: e.target.value})}
+                      placeholder="e.g. 5000"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Company's Monthly PF Contribution (₹)</label>
+                    <input
+                      type="number"
+                      value={pfData.companyPf}
+                      onChange={(e) => setPfData({...pfData, companyPf: e.target.value})}
+                      placeholder="e.g. 5000"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-2">Annual Interest Rate (%)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={pfData.interestRate}
+                      onChange={(e) => setPfData({...pfData, interestRate: e.target.value})}
+                      placeholder="e.g. 8.25"
+                      className="w-full px-4 py-3 bg-background border border-secondary rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={savePfData}
+                    disabled={pfLoading}
+                    className="w-full mt-4 px-6 py-3 bg-accent text-white font-semibold rounded-xl hover:bg-accent/90 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {pfLoading ? 'Saving...' : 'Save PF Details'}
+                  </button>
+                </div>
+                
+                <div className="mt-6 p-4 bg-background/50 rounded-xl border border-secondary">
+                  <p className="text-text-secondary text-sm">
+                    <span className="text-accent font-semibold">Total Monthly Contribution:</span>{' '}
+                    ₹{((parseFloat(pfData.monthlyPf) || 0) + (parseFloat(pfData.companyPf) || 0)).toLocaleString()}
+                  </p>
+                  <p className="text-text-secondary text-sm mt-1">
+                    <span className="text-accent font-semibold">Annual Interest Rate:</span> {pfData.interestRate || 8.25}%
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">PF Maturity Projections</h3>
+                
+                <div className="space-y-3">
+                  {calculatePfMaturity().map((item) => (
+                    <div key={item.years} className="p-4 bg-background/50 rounded-xl border border-secondary">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-text-primary font-semibold">{item.years} Years</span>
+                        <span className="text-accent font-bold text-xl">₹{item.maturityValue.toLocaleString()}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-text-muted">Your Contributions:</span>
+                          <span className="text-text-secondary ml-1">₹{item.totalContributions.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-text-muted">Interest Earned:</span>
+                          <span className="text-green-400 ml-1">₹{item.interestEarned.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 w-full bg-secondary/50 rounded-full h-2">
+                        <div 
+                          className="bg-accent h-2 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, (item.interestEarned / item.maturityValue) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-text-muted text-xs mt-1">
+                        Interest: {((item.interestEarned / item.totalContributions) * 100).toFixed(1)}% of contributions
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Understanding PF Growth</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-background/50 rounded-xl">
+                  <p className="text-accent font-semibold mb-2">Compound Interest Magic</p>
+                  <p className="text-text-secondary text-sm">
+                    Your PF grows with compound interest. The longer you stay invested, the more your money compounds exponentially.
+                  </p>
+                </div>
+                <div className="p-4 bg-background/50 rounded-xl">
+                  <p className="text-accent font-semibold mb-2">Company Match Benefit</p>
+                  <p className="text-text-secondary text-sm">
+                    Many employers match your PF contribution. This is essentially free money that grows tax-free until retirement.
+                  </p>
+                </div>
+                <div className="p-4 bg-background/50 rounded-xl">
+                  <p className="text-accent font-semibold mb-2">Tax-Free Growth</p>
+                  <p className="text-text-secondary text-sm">
+                    PF contributions and interest earned are tax-free under Section 80C. Your money grows completely tax-free.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
