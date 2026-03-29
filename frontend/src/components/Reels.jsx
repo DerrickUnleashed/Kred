@@ -6,8 +6,12 @@ import Navbar from "./Navbar";
 const videos = [
   { url: "/videos/1.mp4", title: "How to make profit?" },
   { url: "/videos/2.mp4", title: "Save smarter" },
-  { url: "/videos/3.mp4", title: "Inflation explained" }
+  { url: "/videos/3.mp4", title: "Inflation explained" },
+  { url: "/videos/4.mp4", title: "Stock changes" },
+  { url: "/videos/5.mp4", title: "Filing insurance" }
 ];
+
+const loopedVideos = [...videos, ...videos, ...videos, ...videos, ...videos];
 
 export default function Reels() {
   const navigate = useNavigate();
@@ -107,7 +111,7 @@ export default function Reels() {
             scrollBehavior: 'smooth'
           }}
         >
-          {videos.map((video, i) => (
+          {loopedVideos.map((video, i) => (
             <div 
               key={i}
               style={{
