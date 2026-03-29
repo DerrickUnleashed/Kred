@@ -141,3 +141,31 @@ KRED introduces a new class of intelligent systems:
 ---
 
 # 📂 Project Structure
+
+```
+.
+├── LICENSE
+├── README.md
+├── backend
+│   ├── __init__.py
+│   ├── app.py
+│   ├── output
+│   ├── requirements.txt
+│   └── stock_service.py
+└── frontend
+    ├── README.md
+    ├── dist
+    ├── eslint.config.js
+    ├── index.html
+    ├── node_modules
+    ├── package-lock.json
+    ├── package.json
+    ├── postcss.config.js
+    ├── public
+    ├── src
+    ├── tailwind.config.js
+    ├── vercel.json
+    └── vite.config.js
+
+8 directories, 15 files
+```
