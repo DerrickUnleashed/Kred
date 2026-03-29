@@ -274,6 +274,7 @@ export default function Dashboard() {
     is_essential: false,
   });
   const [editingId, setEditingId] = useState(null);
+  const [productFilter, setProductFilter] = useState('all');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -426,27 +427,93 @@ export default function Dashboard() {
   const essentialExpenses = products.filter(p => p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
   const nonEssentialExpenses = products.filter(p => !p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
 
-  const categoryData = CATEGORIES.map(cat => ({
-    name: cat,
-    value: products.filter(p => p.category === cat).reduce((sum, p) => sum + (p.total_cost || 0), 0),
-  })).filter(d => d.value > 0);
+  const getMonthName = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString('default', { month: 'short' });
+  };
+
+  const getMonthKey = (dateStr) => {
+    const d = new Date(dateStr);
+    return getMonthName(dateStr) + ' ' + d.getFullYear().toString().slice(-2);
+  };
+
+  const getAvailableMonths = () => {
+    const months = [];
+    const seen = new Set();
+    products.forEach(p => {
+      const monthStr = getMonthKey(p.created_at);
+      if (!seen.has(monthStr)) {
+        seen.add(monthStr);
+        months.push({
+          value: monthStr,
+          label: monthStr,
+        });
+      }
+    });
+    return [{ value: 'all', label: 'All Time' }, ...months];
+  };
+
+  const getFilteredProducts = () => {
+    if (productFilter === 'all') return products;
+    
+    const [monthName, yearSuffix] = productFilter.split(' ');
+    const year = 2000 + parseInt(yearSuffix);
+    return products.filter(p => {
+      const d = new Date(p.created_at);
+      return getMonthName(p.created_at) === monthName && d.getFullYear() === year;
+    });
+  };
+
+  const getMonthlyMultiplier = () => {
+    if (productFilter !== 'all') return 1;
+    const uniqueMonths = new Set(products.map(p => getMonthKey(p.created_at)));
+    return Math.max(1, uniqueMonths.size);
+  };
+
+  const filteredProducts = getFilteredProducts();
+  const monthlyMultiplier = getMonthlyMultiplier();
+  const availableMonths = getAvailableMonths();
+
+  const filteredTotalExpenses = filteredProducts.reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const filteredEssentialExpenses = filteredProducts.filter(p => p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const filteredNonEssentialExpenses = filteredProducts.filter(p => !p.is_essential).reduce((sum, p) => sum + (p.total_cost || 0), 0);
+  const filteredRemaining = (parseFloat(monthlyIncome) * monthlyMultiplier) - filteredTotalExpenses;
 
   const essentialData = [
-    { name: 'Essential', value: essentialExpenses },
-    { name: 'Non-Essential', value: nonEssentialExpenses },
+    { name: 'Essential', value: filteredEssentialExpenses },
+    { name: 'Non-Essential', value: filteredNonEssentialExpenses },
   ].filter(d => d.value > 0);
 
-  const productChartData = products.map(p => ({
-    name: p.name.substring(0, 10),
+  const categoryData = CATEGORIES.map(cat => ({
+    name: cat,
+    value: filteredProducts.filter(p => p.category === cat).reduce((sum, p) => sum + (p.total_cost || 0), 0),
+  })).filter(d => d.value > 0);
+
+  const productChartData = filteredProducts.map(p => ({
+    name: p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name,
     cost: p.total_cost,
     quantity: p.quantity,
   }));
 
-  const monthlyData = [
-    { month: 'Jan', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: totalExpenses },
-    { month: 'Feb', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: 0 },
-    { month: 'Mar', income: parseFloat(monthlyIncome) || 0, expected: expectedExpenses, actual: 0 },
-  ];
+  const calculateMonthlyExpenses = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const income = parseFloat(monthlyIncome) || 0;
+    
+    return months.map(month => {
+      const monthExpenses = products
+        .filter(p => getMonthName(p.created_at) === month)
+        .reduce((sum, p) => sum + (p.total_cost || 0), 0);
+      
+      return {
+        month,
+        income,
+        expected: expectedExpenses,
+        actual: monthExpenses,
+      };
+    }).filter(m => m.actual > 0);
+  };
+
+  const monthlyData = calculateMonthlyExpenses();
 
   if (loading) {
     return (
@@ -490,23 +557,40 @@ export default function Dashboard() {
 
         {activeTab === 'overview' && (
           <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-text-primary">
+                {productFilter === 'all' ? 'All Time Overview' : productFilter}
+              </h2>
+              <select
+                value={productFilter}
+                onChange={(e) => setProductFilter(e.target.value)}
+                className="px-4 py-2 bg-surface border border-secondary rounded-xl text-text-primary focus:outline-none focus:border-accent"
+              >
+                {availableMonths.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <p className="text-text-secondary text-sm mb-1">Monthly Income</p>
-                <p className="text-2xl font-bold text-accent">₹{parseFloat(monthlyIncome).toLocaleString() || '0'}</p>
+                <p className="text-text-secondary text-sm mb-1">Total Income</p>
+                <p className="text-2xl font-bold text-accent">
+                  ₹{(parseFloat(monthlyIncome) * monthlyMultiplier).toLocaleString() || '0'}
+                </p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Expected Savings</p>
-                <p className="text-2xl font-bold text-green-400">₹{parseFloat(expectedSavings).toLocaleString() || '0'}</p>
+                <p className="text-2xl font-bold text-green-400">₹{(parseFloat(expectedSavings) * monthlyMultiplier).toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
-                <p className="text-text-secondary text-sm mb-1">Expected Expense</p>
-                <p className="text-2xl font-bold text-yellow-400">₹{expectedExpenses.toLocaleString() || '0'}</p>
+                <p className="text-text-secondary text-sm mb-1">Total Expenses</p>
+                <p className="text-2xl font-bold text-yellow-400">₹{filteredTotalExpenses.toLocaleString() || '0'}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Remaining</p>
-                <p className={`text-2xl font-bold ₹{remaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  ₹{remaining.toLocaleString()}
+                <p className={`text-2xl font-bold ${filteredRemaining >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ₹{filteredRemaining.toLocaleString()}
                 </p>
               </div>
             </div>
@@ -514,11 +598,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Essential Expenses</p>
-                <p className="text-2xl font-bold text-accent">₹{essentialExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-accent">₹{filteredEssentialExpenses.toLocaleString()}</p>
               </div>
               <div className="bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl p-6">
                 <p className="text-text-secondary text-sm mb-1">Non-Essential Expenses</p>
-                <p className="text-2xl font-bold text-orange-400">₹{nonEssentialExpenses.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-orange-400">₹{filteredNonEssentialExpenses.toLocaleString()}</p>
               </div>
             </div>
 
@@ -554,7 +638,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-text-muted">
-                    No expense data yet
+                    No expense data for selected period
                   </div>
                 )}
               </div>
@@ -590,7 +674,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-text-muted">
-                    No expense data yet
+                    No expense data for selected period
                   </div>
                 )}
               </div>
@@ -611,12 +695,12 @@ export default function Dashboard() {
                           color: '#F8FAFC'
                         }}
                       />
-                      <Bar dataKey="cost" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="cost" fill="#E5B74B" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-text-muted">
-                    No product data yet
+                    No product data for selected period
                   </div>
                 )}
               </div>
