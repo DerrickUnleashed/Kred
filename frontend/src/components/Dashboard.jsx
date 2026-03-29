@@ -580,11 +580,13 @@ export default function Dashboard() {
     value: filteredProducts.filter(p => p.category === cat).reduce((sum, p) => sum + (p.total_cost || 0), 0),
   })).filter(d => d.value > 0);
 
-  const productChartData = filteredProducts.map(p => ({
-    name: p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name,
-    cost: p.total_cost,
-    quantity: p.quantity,
-  }));
+  const productChartData = filteredProducts
+    .map(p => ({
+      name: p.name.length > 15 ? p.name.substring(0, 12) + '...' : p.name,
+      cost: p.total_cost,
+      quantity: p.quantity,
+    }))
+    .sort((a, b) => a.cost - b.cost);
 
   const calculateMonthlyExpenses = () => {
     const income = parseFloat(monthlyIncome) || 0;
