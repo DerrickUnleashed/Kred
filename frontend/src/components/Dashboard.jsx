@@ -551,7 +551,7 @@ export default function Dashboard() {
             to="/fsve"
             className="px-4 py-2 rounded-xl font-medium bg-surface border border-secondary text-text-secondary hover:text-accent hover:border-accent transition-colors"
           >
-            FSVE
+            Simulate
           </Link>
         </div>
 
