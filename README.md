@@ -1,6 +1,19 @@
-# KRED — AI-Powered Life & Financial Intelligence Engine
+<div align="center">
 
-> **See your future. Quantify your decisions. Change your trajectory.**
+<!-- Banner -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=2,2,3,30&height=300&section=header&text=KRED&fontSize=90&animation=fadeIn&fontAlignY=38&desc=AI-Powered%20Life%20&amp;%20Financial%20Intelligence%20Engine&descAlignY=55&descAlign=50" width="100%" />
+
+<!-- Typing Animation -->
+<p align="center">
+  <a href="https://git.io/typing-svg">
+    <img 
+      src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=22&pause=100&color=FFA500&center=true&vCenter=true&multiline=true&height=100&width=900&lines=See+your+future.;Quantify+your+decisions.;Change+your+trajectory." 
+      alt="Typing SVG" 
+    />
+  </a>
+</p>
+
+</div>
 
 # Problem Statement
 
@@ -18,7 +31,7 @@ This leads to:
 
 ---
 
-# 💡 Solution
+# Solution
 
 > The problem isn’t that people don’t care about their future —  
 > it’s that they **can’t see it clearly enough to act today.**
