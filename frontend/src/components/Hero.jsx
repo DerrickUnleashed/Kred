@@ -41,9 +41,11 @@ export default function Hero() {
                 </svg>
               </button>
               </Link>
-              <button className="btn-secondary">
-                Watch Demo
-              </button>
+              <a href="https://www.youtube.com/watch?v=DeGk33Qy6JM" target="_blank" rel="noopener noreferrer">
+                <button className="btn-secondary">
+                  Watch Demo
+                </button>
+              </a>
             </div>
             
             <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-6">

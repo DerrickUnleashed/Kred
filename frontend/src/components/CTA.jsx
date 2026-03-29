@@ -23,9 +23,11 @@ export default function CTA() {
                 </svg>
               </button>
               </Link>
+              <a href="https://www.youtube.com/watch?v=DeGk33Qy6JM" target="_blank" rel="noopener noreferrer">
               <button className="btn-secondary">
                 Schedule a Demo
               </button>
+              </a>
             </div>
           </div>
         </div>

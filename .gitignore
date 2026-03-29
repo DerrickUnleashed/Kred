@@ -7,3 +7,4 @@ kred.db
 backend/.env
 backend/output/
 backend/models/
+KRED*
