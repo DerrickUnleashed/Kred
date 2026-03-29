@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { KredBird } from './KredBird.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -148,6 +149,7 @@ export default function Login() {
           </Link>
         </p>
       </div>
+      <KredBird />
     </div>
   );
 }

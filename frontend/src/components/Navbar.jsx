@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/bot.png';
+import { KredBird } from './KredBird.jsx';
 
 export default function Navbar({ user, onLogout }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,6 +15,7 @@ export default function Navbar({ user, onLogout }) {
   }, []);
 
   return (
+    <>
     <nav className={`fixed top-4 left-4 right-4 z-50 transition-all duration-300 ${
       isScrolled ? 'bg-surface/80 backdrop-blur-xl border border-secondary rounded-2xl' : ''
     }`}>
@@ -58,5 +60,7 @@ export default function Navbar({ user, onLogout }) {
         </div>
       </div>
     </nav>
+    <KredBird />
+    </>
   );
 }
